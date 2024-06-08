@@ -1,0 +1,28 @@
+<mat-radio-group [(ngModel)]="selectedOption" aria-label="Select an option">
+    <mat-radio-button value="1">Escalar Base</mat-radio-button>
+    <mat-radio-button value="2">Escalar IMT</mat-radio-button>
+    <mat-radio-button value="3">Escalar BMT</mat-radio-button>
+    <mat-radio-button value="4">Supereescalar Base</mat-radio-button>
+    <mat-radio-button value="5">Superescalar IMT</mat-radio-button>
+    <mat-radio-button value="6">Superescalar BMT</mat-radio-button>
+    <mat-radio-button value="7">Superescalar SMT</mat-radio-button>
+</mat-radio-group>
+
+<button mat-raised-button color="primary" (click)="start()">Start</button>
+
+<table mat-table [dataSource]="scalarPipeline" class="mat-elevation-z8">
+    <!-- Coluna Stage -->
+    <ng-container matColumnDef="Stage">
+      <th mat-header-cell *matHeaderCellDef> Stage </th>
+      <td mat-cell *matCellDef="let element"> {{element.stage}} </td>
+    </ng-container>
+  
+    <!-- Coluna Instruction -->
+    <ng-container matColumnDef="Instruction">
+      <th mat-header-cell *matHeaderCellDef> Instruction </th>
+      <td mat-cell *matCellDef="let element"> {{element.instruction}} </td>
+    </ng-container>
+  
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+  </table>
