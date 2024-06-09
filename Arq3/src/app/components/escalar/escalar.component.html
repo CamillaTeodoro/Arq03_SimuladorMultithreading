@@ -39,6 +39,10 @@
   <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
 </table>
 
+<div class="btn">
+  <button mat-raised-button color="primary" (click)="start()">Start</button>
+</div>
+
 <mat-divider></mat-divider>
 
 <table mat-table [dataSource]="dataSource2" class="mat-elevation-z8 result">
@@ -54,6 +58,3 @@
   <tr mat-header-row *matHeaderRowDef="displayedColumns2"></tr>
   <tr mat-row *matRowDef="let row; columns: displayedColumns2"></tr>
 </table>
-
-
-<button mat-raised-button color="primary" (click)="start()">Start</button>

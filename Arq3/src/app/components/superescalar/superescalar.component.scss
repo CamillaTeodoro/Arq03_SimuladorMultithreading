@@ -1,13 +1,40 @@
 mat-divider{
-    margin: 25px;
+  margin: 25px;
 
 }
 
 .stage-container {
-    display: flex;
-    flex-direction: row;
-  }
-  
-  .instruction {
-    margin-right: 10px;
-  }
+  display: flex;
+  flex-direction: row;
+}
+
+.instruction {
+  margin-right: 10px;
+  border-radius: 100%;
+  width: 20px;
+  height: 20px;
+  text-align: center;
+}
+
+.btn {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.btn > button {
+  width: 80%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f44336;
+  color: white;
+  font-size: 20px;
+  padding: 10px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: 0.3s;
+}

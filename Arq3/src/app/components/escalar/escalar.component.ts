@@ -1,9 +1,11 @@
 import { Component, Input,  ChangeDetectorRef } from '@angular/core';
 import { MatTableDataSource } from '@angular/material/table';
 
-export interface InstructionResult {
-  name: string; 
-  result: number; 
+export class InstructionResult {
+  CPI: number = 0; 
+  Bolhas: number = 0;
+  Ciclos: number = 0;
+  Instrucoes: number = 0;
 }
 @Component({
   selector: 'app-escalar',
@@ -11,29 +13,310 @@ export interface InstructionResult {
   styleUrls: ['./escalar.component.scss']
 })
 export class EscalarComponent {
+
+  NUM_THREADS = 4;
+  THREAD_SIZE = 5;
+  BLOCK_SIZE = 5;
+
   @Input() tipo: string = "";
   constructor(private cdRef: ChangeDetectorRef) {}
  
   ngAfterViewInit() {
     this.cdRef.detectChanges();
   }
+
   pipelineHistory: ScalarPipeline[] = ScalarPipeline.getNullArray(10);
+  actualLine = 0;
 
   displayedColumns: string[] = ['IF', 'ID', 'EX', 'MEM', 'WB']; 
 
   dataSource = new MatTableDataSource<ScalarPipeline>(this.pipelineHistory);
 
-  instructionResults: InstructionResult[] = [
-    { name: 'IPC', result: 0 }, 
-    { name: 'Bolha', result: 0 },
-    { name: 'Ciclos', result: 0 }
+  results = new InstructionResult;
+
+  displayedColumns2: string[] = ['name', 'result'];
+
+  backgroundColors: string[] = ['green', 'red', 'yellow', 'blue'];
+
+  getResultsArray(): { name: string, result: number }[] {
+    return Object.keys(this.results).map(key => ({
+      name: key,
+      result: (this.results as any)[key]
+    }));
+  }
+
+  dataSource2 = new MatTableDataSource<{ name: string, result: number }>(this.getResultsArray());
+
+  instructionNames: string[] = [
+    'ADD', 'SUB', 'AND', 'OR', 'XOR', 'SLL', 'SRL', 'SRA','SLT', 'SLTU',   // ULA
+    'MUL', 'MULH', 'MULHSU', 'MULHU', 'DIV', 'DIVU', 'REM', 'REMU',        // ULA
+    'LB', 'LH', 'LW', 'LBU', 'LHU', 'SB', 'SH', 'SW',                      // MEMORIA
+    'BEQ', 'BNE', 'BLT', 'BGE', 'BLTU', 'BGEU', 'JAL', 'JALR',             // DESVIO
+    'FADD.S', 'FSUB.S', 'FMUL.S', 'FDIV.S', 'FSQRT.S'                      // PONTO FLUTUANTE
   ];
 
-  displayedColumns2: string[] = ['name', 'result']; 
+  getRandomInstructionName(): string {
+      const randomIndex = Math.floor(Math.random() * this.instructionNames.length);
+      return this.instructionNames[randomIndex];
+  }
 
-  dataSource2 = new MatTableDataSource<InstructionResult>(this.instructionResults);
+  getRandomRegister(threadName: string): string {    
+    if (this.tipo === 'Base') {
+      return 'R' + Math.floor(Math.random() * 32);
 
-  start() {}
+    } else {
+      let base = 0;
+      switch(threadName) {
+        case 'T1': base = 0;  break;
+        case 'T2': base = 8;  break;
+        case 'T3': base = 16; break;
+        case 'T4': base = 24; break;
+      }
+      return 'R' + (Math.floor(Math.random() * 8) + base);
+    }
+  }
+
+  getRandomImmediate(): number {
+    return Math.floor(Math.random() * 1000);
+  }
+
+  generateInstruction(threadName: string, backgroundColor: string): Instruction {
+    const name = this.getRandomInstructionName();
+    const rd = this.getRandomRegister(threadName);
+    const rs1 = this.getRandomRegister(threadName);
+    const rs2 = this.getRandomRegister(threadName);
+    const imm = this.getRandomImmediate();
+
+    if (['ADD', 'SUB', 'AND', 'OR', 'XOR', 'SLL', 'SRL', 'SRA', 'SLT', 'SLTU', 'MUL', 'MULH', 'MULHSU', 'MULHU', 'DIV', 'DIVU', 'REM', 'REMU'].includes(name)) {
+        return new Instruction(threadName, backgroundColor,'R', name, rd, rs1, rs2, 0);
+
+    } else if (['LB', 'LH', 'LW', 'LBU', 'LHU'].includes(name)) {
+        return new Instruction(threadName, backgroundColor, 'I', name, rd, rs1, '', imm);
+
+    } else if (['SB', 'SH', 'SW'].includes(name)) {
+        return new Instruction(threadName, backgroundColor, 'S', name, '', rs1, rs2, imm);
+
+    } else if (['BEQ', 'BNE', 'BLT', 'BGE', 'BLTU', 'BGEU'].includes(name)) {
+        return new Instruction(threadName, backgroundColor, 'B', name, '', rs1, rs2, imm);
+
+    } else if (name === 'JAL') {
+        return new Instruction(threadName, backgroundColor, 'J', name, rd, '', '', imm);
+
+    } else if (name === 'JALR') {
+        return new Instruction(threadName, backgroundColor, 'I', name, rd, rs1, '', imm);
+        
+    } else {
+        return new Instruction(threadName, backgroundColor, 'F', name, rd, rs1, rs2, 0);
+    }
+  }
+
+  generateInstructions(n: number, threadName: string, backgroundColor: string): Instruction[] {
+    let instructions: Instruction[] = [];
+    for (let i = 0; i < n; i++) {
+        const instruction = this.generateInstruction(threadName, backgroundColor);
+        instructions.push(instruction);
+    }
+
+    // Atualizar ultimas instrucoes como null
+    switch (this.tipo) {
+
+      case 'Base':
+      for (let i = 0; i < 5; i++) {
+        const instruction = Instruction.null();
+        instructions.push(instruction);
+      }
+      break;
+
+      case 'IMT':
+        let i = threadName == 'T1' ? 2 : 1
+        for(let j = 0; j < i; j++) {
+          const instruction = Instruction.null();
+          instructions.push(instruction);
+        }
+      break;
+
+      case 'BMT':
+        if(threadName == 'T1') {
+          for (let i = 0; i < 5; i++) {
+            const instruction = Instruction.null();
+            instructions.push(instruction);
+          }
+        }
+      break;
+
+      default : console.log('error');
+    }
+    return instructions;
+  }
+
+  generateThreads(n: number, length: number): Thread[] {
+    const threads: Thread[] = [];
+    for (let i = 0; i < n; i++) {
+        const threadName = `T${i+1}`;
+        const instructions = this.generateInstructions(length, threadName, this.backgroundColors[i]);
+        const thread = new Thread(instructions, threadName);
+        threads.push(thread);
+    }
+    return threads;
+  }
+
+  start(): void {
+    switch (this.tipo) {
+      case 'Base': this.base(); break;
+      case 'IMT':  this.IMT();  break;
+      case 'BMT':  this.BMT();  break;
+      default : console.log('error');
+    }
+  }
+
+  async base(): Promise<void> {
+    const threads = this.generateThreads(1, this.THREAD_SIZE);
+    console.log(threads[0].toString());
+  
+    this.pipelineHistory.forEach(element => {
+      element.IF = Instruction.null();
+      element.ID = Instruction.null();
+      element.EX = Instruction.null();
+      element.MEM = Instruction.null();
+      element.WB = Instruction.null();
+    });
+  
+    for (let i = 0; i < threads[0].instructions.length; i++) {
+      console.log(this.pipelineHistory)
+      this.pipelineHistory[this.actualLine].WB = this.pipelineHistory[this.actualLine].MEM;
+      this.pipelineHistory[this.actualLine].MEM = this.pipelineHistory[this.actualLine].EX;
+
+      // Verificar dependencia verdadeira
+      if(
+        (this.pipelineHistory[this.actualLine].ID.rs1 != '' && this.pipelineHistory[this.actualLine].ID.rs2 != '') &&
+        (this.pipelineHistory[this.actualLine].WB.rd  == this.pipelineHistory[this.actualLine].ID.rs1 ||
+         this.pipelineHistory[this.actualLine].WB.rd  == this.pipelineHistory[this.actualLine].ID.rs2 ||
+         this.pipelineHistory[this.actualLine].MEM.rd == this.pipelineHistory[this.actualLine].ID.rs1 ||
+         this.pipelineHistory[this.actualLine].MEM.rd == this.pipelineHistory[this.actualLine].ID.rs2)
+      )
+      {
+        // Bolha
+        this.pipelineHistory[this.actualLine].EX = Instruction.null();
+        this.results.Bolhas++;
+        i--;
+      } else {
+        this.pipelineHistory[this.actualLine].EX = this.pipelineHistory[this.actualLine].ID;
+        this.pipelineHistory[this.actualLine].ID = this.pipelineHistory[this.actualLine].IF;
+        this.pipelineHistory[this.actualLine].IF = threads[0].instructions[i];
+      }
+  
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      this.actualLine = this.actualLine != 9 ? this.actualLine++ : 9;
+
+      if(this.pipelineHistory[this.actualLine].WB.name != '') {
+        this.results.Instrucoes++;
+      }
+      
+      if(i != threads[0].instructions.length-2) this.results.Ciclos++;
+
+      this.results.CPI = this.results.Instrucoes != 0 ? this.results.Ciclos/this.results.Instrucoes : 0;
+    }
+  }
+
+  async IMT(): Promise<void> {
+    const threads = this.generateThreads(this.NUM_THREADS, this.THREAD_SIZE);
+    console.log(threads.toString());
+  
+    this.pipelineHistory.forEach(element => {
+      element.IF = Instruction.null();
+      element.ID = Instruction.null();
+      element.EX = Instruction.null();
+      element.MEM = Instruction.null();
+      element.WB = Instruction.null();
+    });
+  
+    for (let i = 0; i < threads[0].instructions.length; i++) {   // Considerando que todas threads têm mesmo tamanho
+      for(let j = 0; j < this.NUM_THREADS; j++) {
+        this.pipelineHistory[this.actualLine].WB = this.pipelineHistory[this.actualLine].MEM;
+        this.pipelineHistory[this.actualLine].MEM = this.pipelineHistory[this.actualLine].EX;
+        this.pipelineHistory[this.actualLine].EX = this.pipelineHistory[this.actualLine].ID;
+        this.pipelineHistory[this.actualLine].ID = this.pipelineHistory[this.actualLine].IF;
+        this.pipelineHistory[this.actualLine].IF = threads[j].instructions[i];
+
+        await new Promise(resolve => setTimeout(resolve, 1000));
+  
+        this.actualLine = this.actualLine != 9 ? this.actualLine++ : 9;
+
+        if(this.pipelineHistory[this.actualLine].WB.name != '') {
+          this.results.Instrucoes++;
+        }
+
+        if(i != threads[0].instructions.length-1) this.results.Ciclos++;
+        else break;
+
+        this.results.CPI = this.results.Instrucoes != 0 ? this.results.Ciclos/this.results.Instrucoes : 0;
+      }
+    }
+  }
+
+  async BMT(): Promise<void> {
+    const threads = this.generateThreads(this.NUM_THREADS, this.THREAD_SIZE);
+    console.log(threads.toString());
+  
+    this.pipelineHistory.forEach(element => {
+      element.IF = Instruction.null();
+      element.ID = Instruction.null();
+      element.EX = Instruction.null();
+      element.MEM = Instruction.null();
+      element.WB = Instruction.null();
+    });
+
+    let finishedSMT = false;
+    let threadSize = threads[0].instructions.length/this.BLOCK_SIZE + 1;
+
+    for (let i = 0; i < threadSize; i++) {   // Considerando que todas threads têm mesmo tamanho
+      for(let j = 0; j < this.NUM_THREADS; j++) {
+
+        if (!finishedSMT) {
+
+          for(let k = 0; k < this.BLOCK_SIZE; k++) {
+
+            this.pipelineHistory[this.actualLine].WB = this.pipelineHistory[this.actualLine].MEM;
+            this.pipelineHistory[this.actualLine].MEM = this.pipelineHistory[this.actualLine].EX;
+
+            // Verificar dependencia verdadeira
+            if(
+              (this.pipelineHistory[this.actualLine].ID.rs1 != '' && this.pipelineHistory[this.actualLine].ID.rs2 != '') &&
+              (this.pipelineHistory[this.actualLine].WB.rd == this.pipelineHistory[this.actualLine].ID.rs1 ||
+               this.pipelineHistory[this.actualLine].WB.rd == this.pipelineHistory[this.actualLine].ID.rs2 ||
+               this.pipelineHistory[this.actualLine].MEM.rd == this.pipelineHistory[this.actualLine].ID.rs1 ||
+               this.pipelineHistory[this.actualLine].MEM.rd == this.pipelineHistory[this.actualLine].ID.rs2)
+            )
+            {
+              // Bolha
+              this.pipelineHistory[this.actualLine].EX = Instruction.null();
+              this.results.Bolhas++;
+              k--;
+            } else {
+              this.pipelineHistory[this.actualLine].EX = this.pipelineHistory[this.actualLine].ID;
+              this.pipelineHistory[this.actualLine].ID = this.pipelineHistory[this.actualLine].IF;
+              this.pipelineHistory[this.actualLine].IF = threads[j].instructions[i*this.BLOCK_SIZE+k];
+            }
+        
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            this.actualLine = this.actualLine != 9 ? this.actualLine++ : 9;
+
+            if(this.pipelineHistory[this.actualLine].WB.name != '') {
+              this.results.Instrucoes++;
+            }
+            
+            if(i != threadSize-1) this.results.Ciclos++;
+
+            this.results.CPI = this.results.Instrucoes != 0 ? this.results.Ciclos/this.results.Instrucoes : 0;
+          }
+
+          finishedSMT = i==threadSize-1 ? true : false;
+        }
+      }
+    }
+  }
 }
 
 export class Instruction {

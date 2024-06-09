@@ -50,6 +50,7 @@ export class SuperescalarComponent {
       { name: 'I4', color: '#ffff00', stage: 'execucao' },
       { name: 'I4', color: '#ffff00', stage: 'writeback' }
     ];
+    
   
     const rows: InstructionRow[] = Array.from({length: 6}, (_, i) => ({ ciclo: i + 1, decodificacao: [], execucao: [], writeback: [] }));
   
@@ -106,6 +107,3 @@ export class SuperescalarComponent {
 
   dataSource2 = new MatTableDataSource<InstructionResult>(this.instructionResults);
 }
-
-
-
