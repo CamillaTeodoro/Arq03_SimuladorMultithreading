@@ -1,11 +1,11 @@
 <mat-radio-group [(ngModel)]="selectedOption" aria-label="Select an option">
-    <mat-radio-button value="1">Escalar Base</mat-radio-button>
-    <mat-radio-button value="2">Escalar IMT</mat-radio-button>
-    <mat-radio-button value="3">Escalar BMT</mat-radio-button>
-    <mat-radio-button value="4">Supereescalar Base</mat-radio-button>
-    <mat-radio-button value="5">Superescalar IMT</mat-radio-button>
-    <mat-radio-button value="6">Superescalar BMT</mat-radio-button>
-    <mat-radio-button value="7">Superescalar SMT</mat-radio-button>
+    <mat-radio-button value="scalar">Escalar Base</mat-radio-button>
+    <mat-radio-button value="scalarIMT">Escalar IMT</mat-radio-button>
+    <mat-radio-button value="scalarBMT">Escalar BMT</mat-radio-button>
+    <mat-radio-button value="superscalar">Supereescalar Base</mat-radio-button>
+    <mat-radio-button value="superscalarIMT">Superescalar IMT</mat-radio-button>
+    <mat-radio-button value="superscalarBMT">Superescalar BMT</mat-radio-button>
+    <mat-radio-button value="superscalarSMT">Superescalar SMT</mat-radio-button>
 </mat-radio-group>
 
 <button mat-raised-button color="primary" (click)="start()">Start</button>
@@ -19,10 +19,15 @@
   
     <!-- Coluna Instruction -->
     <ng-container matColumnDef="Instruction">
-      <th mat-header-cell *matHeaderCellDef> Instruction </th>
-      <td mat-cell *matCellDef="let element"> {{element.instruction}} </td>
+        <th mat-header-cell *matHeaderCellDef> Instruction </th>
+        <td mat-cell *matCellDef="let element"> {{element.instruction.toString()}} </td>
     </ng-container>
   
     <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
     <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
   </table>
+
+    <p>Número Bolhas: {{bubbleCount}}</p>
+    <p>Numero Instruções: {{instructionsCount}}</p>
+    <p>Número de Ciclos: {{cycleCount}}</p>
+    <p>CPI: {{CPI}}</p>
