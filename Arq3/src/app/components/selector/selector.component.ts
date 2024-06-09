@@ -10,8 +10,8 @@ export class SelectorComponent {
 
   selecionaArquitetura = ['Escalar', 'Superescalar'];
   tipoMultithreading: { [key: string]: string[] } = {
-    'Escalar': ['IMT', 'BMT'],
-    'Superescalar': ['IMT', 'BMT', 'SMT']
+    'Escalar': ['Base', 'IMT', 'BMT'],
+    'Superescalar': ['Base', 'IMT', 'BMT', 'SMT']
   };
 
   arquitetura: string = '';

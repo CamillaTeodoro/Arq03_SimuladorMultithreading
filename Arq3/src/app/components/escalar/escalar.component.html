@@ -1,46 +1,37 @@
-<table mat-table [dataSource]="instructions" class="mat-elevation-z8">
-  <ng-container matColumnDef="name">
-    <th mat-header-cell *matHeaderCellDef>Nome</th>
-    <td mat-cell *matCellDef="let instruction">{{ instruction.name }}</td>
-  </ng-container>
+
+<table mat-table [dataSource]="pipelineHistory" class="mat-elevation-z8">
   <ng-container matColumnDef="IF">
     <th mat-header-cell *matHeaderCellDef>IF</th>
     <td mat-cell *matCellDef="let instruction">
-      <div
-        [style.background-color]="instruction.IF ? 'green' : 'transparent'"
-      ></div>
+      <div [style.background-color]="instruction.IF.backgroundColor">{{instruction.IF.toString()}}</div>
     </td>
   </ng-container>
+  
   <ng-container matColumnDef="ID">
     <th mat-header-cell *matHeaderCellDef>ID</th>
     <td mat-cell *matCellDef="let instruction">
-      <div
-        [style.background-color]="instruction.ID ? 'green' : 'transparent'"
-      ></div>
+      <div [style.background-color]="instruction.ID.backgroundColor">{{instruction.ID.toString()}}</div>
     </td>
   </ng-container>
+  
   <ng-container matColumnDef="EX">
     <th mat-header-cell *matHeaderCellDef>EX</th>
     <td mat-cell *matCellDef="let instruction">
-      <div
-        [style.background-color]="instruction.EX ? 'green' : 'transparent'"
-      ></div>
+      <div [style.background-color]="instruction.EX.backgroundColor">{{instruction.EX.toString()}}</div>
     </td>
   </ng-container>
+
   <ng-container matColumnDef="MEM">
     <th mat-header-cell *matHeaderCellDef>MEM</th>
     <td mat-cell *matCellDef="let instruction">
-      <div
-        [style.background-color]="instruction.MEM ? 'green' : 'transparent'"
-      ></div>
+      <div [style.background-color]="instruction.MEM.backgroundColor">{{instruction.MEM.toString()}}</div>
     </td>
   </ng-container>
+
   <ng-container matColumnDef="WB">
     <th mat-header-cell *matHeaderCellDef>WB</th>
     <td mat-cell *matCellDef="let instruction">
-      <div
-        [style.background-color]="instruction.WB ? 'green' : 'transparent'"
-      ></div>
+      <div [style.background-color]="instruction.WB.backgroundColor">{{instruction.WB.toString()}}</div>
     </td>
   </ng-container>
 
@@ -63,3 +54,6 @@
   <tr mat-header-row *matHeaderRowDef="displayedColumns2"></tr>
   <tr mat-row *matRowDef="let row; columns: displayedColumns2"></tr>
 </table>
+
+
+<button mat-raised-button color="primary" (click)="start()">Start</button>
