@@ -4,7 +4,7 @@
       (arquiteturaChange)="onArquiteturaChange($event)"
     ></app-selector>
   </mat-drawer>
-  <mat-drawer-content class="principal">
+  <mat-drawer-content class="principal" *ngIf="arquitetura && tipo">
     <ng-container *ngIf="arquitetura === 'Escalar'; else superescalar">
       <app-escalar [tipo]="tipo"></app-escalar>
     </ng-container>

@@ -1,4 +1,65 @@
-<div>
-  <p>Arquitetura: Escalar</p>
-  <p>Técnica Multithreading: {{ tipo }}</p>
-</div>
+<table mat-table [dataSource]="instructions" class="mat-elevation-z8">
+  <ng-container matColumnDef="name">
+    <th mat-header-cell *matHeaderCellDef>Nome</th>
+    <td mat-cell *matCellDef="let instruction">{{ instruction.name }}</td>
+  </ng-container>
+  <ng-container matColumnDef="IF">
+    <th mat-header-cell *matHeaderCellDef>IF</th>
+    <td mat-cell *matCellDef="let instruction">
+      <div
+        [style.background-color]="instruction.IF ? 'green' : 'transparent'"
+      ></div>
+    </td>
+  </ng-container>
+  <ng-container matColumnDef="ID">
+    <th mat-header-cell *matHeaderCellDef>ID</th>
+    <td mat-cell *matCellDef="let instruction">
+      <div
+        [style.background-color]="instruction.ID ? 'green' : 'transparent'"
+      ></div>
+    </td>
+  </ng-container>
+  <ng-container matColumnDef="EX">
+    <th mat-header-cell *matHeaderCellDef>EX</th>
+    <td mat-cell *matCellDef="let instruction">
+      <div
+        [style.background-color]="instruction.EX ? 'green' : 'transparent'"
+      ></div>
+    </td>
+  </ng-container>
+  <ng-container matColumnDef="MEM">
+    <th mat-header-cell *matHeaderCellDef>MEM</th>
+    <td mat-cell *matCellDef="let instruction">
+      <div
+        [style.background-color]="instruction.MEM ? 'green' : 'transparent'"
+      ></div>
+    </td>
+  </ng-container>
+  <ng-container matColumnDef="WB">
+    <th mat-header-cell *matHeaderCellDef>WB</th>
+    <td mat-cell *matCellDef="let instruction">
+      <div
+        [style.background-color]="instruction.WB ? 'green' : 'transparent'"
+      ></div>
+    </td>
+  </ng-container>
+
+  <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+  <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+</table>
+
+<mat-divider></mat-divider>
+
+<table mat-table [dataSource]="dataSource2" class="mat-elevation-z8 result">
+  <ng-container matColumnDef="name">
+    <th mat-header-cell *matHeaderCellDef>Métricas</th>
+    <td mat-cell *matCellDef="let result">{{ result.name }}</td>
+  </ng-container>
+  <ng-container matColumnDef="result">
+    <th mat-header-cell *matHeaderCellDef>Resultado</th>
+    <td mat-cell *matCellDef="let result">{{ result.result }}</td>
+  </ng-container>
+
+  <tr mat-header-row *matHeaderRowDef="displayedColumns2"></tr>
+  <tr mat-row *matRowDef="let row; columns: displayedColumns2"></tr>
+</table>

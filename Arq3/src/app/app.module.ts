@@ -13,6 +13,10 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
 import { EscalarComponent } from './components/escalar/escalar.component';
 import { SuperescalarComponent } from './components/superescalar/superescalar.component';
+import { MatTableModule } from '@angular/material/table';
+import { MatStepperModule } from '@angular/material/stepper';
+import { MatDividerModule } from '@angular/material/divider';
+
 
 @NgModule({
   declarations: [
@@ -21,7 +25,8 @@ import { SuperescalarComponent } from './components/superescalar/superescalar.co
     HeaderComponent,
     SelectorComponent,
     EscalarComponent,
-    SuperescalarComponent
+    SuperescalarComponent,
+
   ],
   imports: [
     BrowserModule,
@@ -30,7 +35,10 @@ import { SuperescalarComponent } from './components/superescalar/superescalar.co
     BrowserAnimationsModule,
     MatSidenavModule,
     MatFormFieldModule,
-    MatSelectModule
+    MatSelectModule,
+    MatTableModule,
+    MatStepperModule,
+    MatDividerModule
   ],
   providers: [],
   bootstrap: [AppComponent]
