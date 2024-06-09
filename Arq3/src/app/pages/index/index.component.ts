@@ -7,5 +7,12 @@ import {MatSidenavModule} from '@angular/material/sidenav';
   styleUrls: ['./index.component.scss']
 })
 export class IndexComponent {
+  arquitetura: string = '';
+  tipo: string = '';
 
+  onArquiteturaChange(event: { arquitetura: string, tipo: string }) {
+    this.arquitetura = event.arquitetura;
+    this.tipo = event.tipo;
+    console.log(event);
+  }
 }

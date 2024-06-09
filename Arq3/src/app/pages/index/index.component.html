@@ -1,6 +1,18 @@
 <mat-drawer-container class="container">
   <mat-drawer class="menu-lateral" mode="side" opened>
-    <app-selector></app-selector>
+    <app-selector
+      (arquiteturaChange)="onArquiteturaChange($event)"
+    ></app-selector>
   </mat-drawer>
-  <mat-drawer-content class="principal">Main content</mat-drawer-content>
+  <mat-drawer-content class="principal">
+    <ng-container *ngIf="arquitetura === 'Escalar'; else superescalar">
+      <app-escalar [tipo]="tipo"></app-escalar>
+    </ng-container>
+    <ng-template #superescalar>
+      <app-superescalar
+        *ngIf="arquitetura === 'Superescalar'"
+        [tipo]="tipo"
+      ></app-superescalar>
+    </ng-template>
+  </mat-drawer-content>
 </mat-drawer-container>

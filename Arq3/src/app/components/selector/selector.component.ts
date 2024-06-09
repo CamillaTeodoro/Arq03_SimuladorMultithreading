@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, EventEmitter, Output } from '@angular/core';
 
 @Component({
   selector: 'app-selector',
@@ -6,6 +6,8 @@ import { Component } from '@angular/core';
   styleUrls: ['./selector.component.scss']
 })
 export class SelectorComponent {
+  @Output() arquiteturaChange = new EventEmitter<{ arquitetura: string, tipo: string }>();
+
   selecionaArquitetura = ['Escalar', 'Superescalar'];
   tipoMultithreading: { [key: string]: string[] } = {
     'Escalar': ['IMT', 'BMT'],
@@ -16,9 +18,19 @@ export class SelectorComponent {
   tipo: string = '';
   opcaoSelecionada: string[] = [];
 
-  onSelectMetodo(opcao: string) {
+  onSelectArquitetura(opcao: string) {
     this.arquitetura = opcao;
     this.opcaoSelecionada = this.tipoMultithreading[opcao] || [];
     this.tipo = '';
+    this.emitChange();
+  }
+
+  onSelectTipo(opcao: string) {
+    this.tipo = opcao;
+    this.emitChange();
+  }
+
+  emitChange(){
+    this.arquiteturaChange.emit({ arquitetura: this.arquitetura, tipo: this.tipo });
   }
 }

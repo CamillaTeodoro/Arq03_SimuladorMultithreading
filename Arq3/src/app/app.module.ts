@@ -11,13 +11,17 @@ import {MatSidenavModule} from '@angular/material/sidenav';
 import { SelectorComponent } from './components/selector/selector.component';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
+import { EscalarComponent } from './components/escalar/escalar.component';
+import { SuperescalarComponent } from './components/superescalar/superescalar.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     IndexComponent,
     HeaderComponent,
-    SelectorComponent
+    SelectorComponent,
+    EscalarComponent,
+    SuperescalarComponent
   ],
   imports: [
     BrowserModule,
