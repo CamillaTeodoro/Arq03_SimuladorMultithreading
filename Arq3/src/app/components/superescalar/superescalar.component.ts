@@ -14,6 +14,11 @@ export interface Instruction {
     execucao: Instruction[];
     writeback: Instruction[];
   }
+
+  export interface InstructionResult {
+    name: string; 
+    result: number; 
+  }
   
 @Component({
   selector: 'app-superescalar',
@@ -81,6 +86,17 @@ export class SuperescalarComponent {
   
     this.dataSource.data = rows;
   }
+
+
+  instructionResults: InstructionResult[] = [
+    { name: 'IPC', result: 0 }, 
+    { name: 'Bolha', result: 0 },
+    { name: 'Ciclos', result: 0 }
+  ];
+
+  displayedColumns2: string[] = ['name', 'result']; 
+
+  dataSource2 = new MatTableDataSource<InstructionResult>(this.instructionResults);
 }
 
 
