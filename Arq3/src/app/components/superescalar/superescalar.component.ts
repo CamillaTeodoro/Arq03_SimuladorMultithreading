@@ -53,40 +53,48 @@ export class SuperescalarComponent {
   
     const rows: InstructionRow[] = Array.from({length: 6}, (_, i) => ({ ciclo: i + 1, decodificacao: [], execucao: [], writeback: [] }));
   
+    const addedInstructions: { [name: string]: { [stage: string]: boolean } } = {};
+  
     instructions.forEach(instruction => {
+      if (!addedInstructions[instruction.name]) {
+        addedInstructions[instruction.name] = {};
+      }
+  
+      if (addedInstructions[instruction.name][instruction.stage]) {
+        return;
+      }
+  
+      addedInstructions[instruction.name][instruction.stage] = true;
+  
       if (instruction.stage === 'decodificacao') {
         if (instruction.name === 'I1' || instruction.name === 'I2') {
           rows[0].decodificacao.push(instruction);
         } else if (instruction.name === 'I3') {
           rows[1].decodificacao.push(instruction);
-          rows[2].decodificacao.push(instruction);
         } else if (instruction.name === 'I4') {
-          rows[1].decodificacao.push(instruction);
           rows[2].decodificacao.push(instruction);
-          rows[3].decodificacao.push(instruction);
         }
       } else if (instruction.stage === 'execucao') {
         if (instruction.name === 'I1' || instruction.name === 'I2') {
           rows[1].execucao.push(instruction);
         } else if (instruction.name === 'I3') {
-          rows[3].execucao.push(instruction);
+          rows[2].execucao.push(instruction);
         } else if (instruction.name === 'I4') {
-          rows[4].execucao.push(instruction);
+          rows[3].execucao.push(instruction);
         }
       } else if (instruction.stage === 'writeback') {
         if (instruction.name === 'I1' || instruction.name === 'I2') {
-          rows[3].writeback.push(instruction);
+          rows[2].writeback.push(instruction);
         } else if (instruction.name === 'I3') {
-          rows[4].writeback.push(instruction);
+          rows[3].writeback.push(instruction);
         } else if (instruction.name === 'I4') {
-          rows[5].writeback.push(instruction);
+          rows[4].writeback.push(instruction);
         }
       }
     });
   
     this.dataSource.data = rows;
   }
-
 
   instructionResults: InstructionResult[] = [
     { name: 'IPC', result: 0 }, 
