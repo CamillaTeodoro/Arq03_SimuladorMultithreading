@@ -1,4 +1,63 @@
-<div>
-  <p>Arquitetura: Superescalar</p>
-  <p>Técnica Multithreading: {{ tipo }}</p>
-</div>
+<mat-table [dataSource]="dataSource" class="mat-elevation-z8">
+  <ng-container matColumnDef="ciclo">
+    <mat-header-cell *matHeaderCellDef>Ciclo</mat-header-cell>
+    <mat-cell *matCellDef="let element">{{ element.ciclo }}</mat-cell>
+  </ng-container>
+
+  <ng-container matColumnDef="decodificacao">
+    <mat-header-cell *matHeaderCellDef>Decodificação</mat-header-cell>
+    <mat-cell
+      *matCellDef="let element"
+      [attr.colspan]="element.decodificacao.length"
+    >
+      <div class="stage-container">
+        <div
+          *ngFor="let instruction of element.decodificacao"
+          class="instruction"
+          [style.background-color]="instruction.color"
+        >
+          {{ instruction.name }}
+        </div>
+      </div>
+    </mat-cell>
+  </ng-container>
+
+  <ng-container matColumnDef="execucao">
+    <mat-header-cell *matHeaderCellDef>Execução</mat-header-cell>
+    <mat-cell
+      *matCellDef="let element"
+      [attr.colspan]="element.execucao.length"
+    >
+      <div class="stage-container">
+        <div
+          *ngFor="let instruction of element.execucao"
+          class="instruction"
+          [style.background-color]="instruction.color"
+        >
+          {{ instruction.name }}
+        </div>
+      </div>
+    </mat-cell>
+  </ng-container>
+
+  <ng-container matColumnDef="writeback">
+    <mat-header-cell *matHeaderCellDef>Write-Back</mat-header-cell>
+    <mat-cell
+      *matCellDef="let element"
+      [attr.colspan]="element.writeback.length"
+    >
+      <div class="stage-container">
+        <div
+          *ngFor="let instruction of element.writeback"
+          class="instruction"
+          [style.background-color]="instruction.color"
+        >
+          {{ instruction.name }}
+        </div>
+      </div>
+    </mat-cell>
+  </ng-container>
+
+  <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
+  <mat-row *matRowDef="let row; columns: displayedColumns"></mat-row>
+</mat-table>
