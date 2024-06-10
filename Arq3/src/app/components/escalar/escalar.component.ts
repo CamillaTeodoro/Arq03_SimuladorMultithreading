@@ -1,5 +1,6 @@
 import { Component, Input,  ChangeDetectorRef } from '@angular/core';
 import { MatTableDataSource } from '@angular/material/table';
+import { SuperescalarComponent } from '../superescalar/superescalar.component';
 
 export class InstructionResult {
   CPI: number = 0; 
@@ -15,7 +16,7 @@ export class InstructionResult {
 export class EscalarComponent {
 
   NUM_THREADS = 4;
-  THREAD_SIZE = 5;
+  THREAD_SIZE = 20;
   BLOCK_SIZE = 5;
 
   @Input() tipo: string = "";
@@ -25,8 +26,8 @@ export class EscalarComponent {
     this.cdRef.detectChanges();
   }
 
-  pipelineHistory: ScalarPipeline[] = ScalarPipeline.getNullArray(10);
-  actualLine = 0;
+  pipelineHistory: ScalarPipeline[] = ScalarPipeline.getNullArray(100);
+  actualLine = 1;
 
   displayedColumns: string[] = ['IF', 'ID', 'EX', 'MEM', 'WB']; 
 
@@ -36,7 +37,7 @@ export class EscalarComponent {
 
   displayedColumns2: string[] = ['name', 'result'];
 
-  backgroundColors: string[] = ['green', 'red', 'yellow', 'blue'];
+  backgroundColors: string[] = ['green', 'red', 'orange', 'blue'];
 
   getResultsArray(): { name: string, result: number }[] {
     return Object.keys(this.results).map(key => ({
@@ -171,7 +172,6 @@ export class EscalarComponent {
 
   async base(): Promise<void> {
     const threads = this.generateThreads(1, this.THREAD_SIZE);
-    console.log(threads[0].toString());
   
     this.pipelineHistory.forEach(element => {
       element.IF = Instruction.null();
@@ -182,46 +182,48 @@ export class EscalarComponent {
     });
   
     for (let i = 0; i < threads[0].instructions.length; i++) {
-      console.log(this.pipelineHistory)
-      this.pipelineHistory[this.actualLine].WB = this.pipelineHistory[this.actualLine].MEM;
-      this.pipelineHistory[this.actualLine].MEM = this.pipelineHistory[this.actualLine].EX;
+      this.pipelineHistory[this.actualLine].WB = this.pipelineHistory[this.actualLine-1].MEM;
+      this.pipelineHistory[this.actualLine].MEM = this.pipelineHistory[this.actualLine-1].EX;
 
       // Verificar dependencia verdadeira
       if(
-        (this.pipelineHistory[this.actualLine].ID.rs1 != '' && this.pipelineHistory[this.actualLine].ID.rs2 != '') &&
-        (this.pipelineHistory[this.actualLine].WB.rd  == this.pipelineHistory[this.actualLine].ID.rs1 ||
-         this.pipelineHistory[this.actualLine].WB.rd  == this.pipelineHistory[this.actualLine].ID.rs2 ||
-         this.pipelineHistory[this.actualLine].MEM.rd == this.pipelineHistory[this.actualLine].ID.rs1 ||
-         this.pipelineHistory[this.actualLine].MEM.rd == this.pipelineHistory[this.actualLine].ID.rs2)
+        (this.pipelineHistory[this.actualLine-1].ID.rs1 != '' && this.pipelineHistory[this.actualLine-1].ID.rs2 != '') &&
+        (this.pipelineHistory[this.actualLine].WB.rd  == this.pipelineHistory[this.actualLine-1].ID.rs1 ||
+         this.pipelineHistory[this.actualLine].WB.rd  == this.pipelineHistory[this.actualLine-1].ID.rs2 ||
+         this.pipelineHistory[this.actualLine].MEM.rd == this.pipelineHistory[this.actualLine-1].ID.rs1 ||
+         this.pipelineHistory[this.actualLine].MEM.rd == this.pipelineHistory[this.actualLine-1].ID.rs2)
       )
       {
         // Bolha
-        this.pipelineHistory[this.actualLine].EX = Instruction.null();
+        this.pipelineHistory[this.actualLine].EX = Instruction.bubble(threads[0].name);
+        this.pipelineHistory[this.actualLine].ID = this.pipelineHistory[this.actualLine-1].ID;
+        this.pipelineHistory[this.actualLine].IF = this.pipelineHistory[this.actualLine-1].IF;              
         this.results.Bolhas++;
         i--;
       } else {
-        this.pipelineHistory[this.actualLine].EX = this.pipelineHistory[this.actualLine].ID;
-        this.pipelineHistory[this.actualLine].ID = this.pipelineHistory[this.actualLine].IF;
+        this.pipelineHistory[this.actualLine].EX = this.pipelineHistory[this.actualLine-1].ID;
+        this.pipelineHistory[this.actualLine].ID = this.pipelineHistory[this.actualLine-1].IF;
         this.pipelineHistory[this.actualLine].IF = threads[0].instructions[i];
       }
   
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      this.actualLine = this.actualLine != 9 ? this.actualLine++ : 9;
-
-      if(this.pipelineHistory[this.actualLine].WB.name != '') {
+      if(this.pipelineHistory[this.actualLine-1].WB.name != '') {
         this.results.Instrucoes++;
       }
       
-      if(i != threads[0].instructions.length-2) this.results.Ciclos++;
+      if(i != threads[0].instructions.length-2) {
+        this.results.Ciclos++;
+      }
 
+      this.actualLine++;
       this.results.CPI = this.results.Instrucoes != 0 ? this.results.Ciclos/this.results.Instrucoes : 0;
+      this.dataSource2.data = this.getResultsArray();
     }
   }
 
   async IMT(): Promise<void> {
     const threads = this.generateThreads(this.NUM_THREADS, this.THREAD_SIZE);
-    console.log(threads.toString());
   
     this.pipelineHistory.forEach(element => {
       element.IF = Instruction.null();
@@ -233,15 +235,13 @@ export class EscalarComponent {
   
     for (let i = 0; i < threads[0].instructions.length; i++) {   // Considerando que todas threads têm mesmo tamanho
       for(let j = 0; j < this.NUM_THREADS; j++) {
-        this.pipelineHistory[this.actualLine].WB = this.pipelineHistory[this.actualLine].MEM;
-        this.pipelineHistory[this.actualLine].MEM = this.pipelineHistory[this.actualLine].EX;
-        this.pipelineHistory[this.actualLine].EX = this.pipelineHistory[this.actualLine].ID;
-        this.pipelineHistory[this.actualLine].ID = this.pipelineHistory[this.actualLine].IF;
+        this.pipelineHistory[this.actualLine].WB = this.pipelineHistory[this.actualLine-1].MEM;
+        this.pipelineHistory[this.actualLine].MEM = this.pipelineHistory[this.actualLine-1].EX;
+        this.pipelineHistory[this.actualLine].EX = this.pipelineHistory[this.actualLine-1].ID;
+        this.pipelineHistory[this.actualLine].ID = this.pipelineHistory[this.actualLine-1].IF;
         this.pipelineHistory[this.actualLine].IF = threads[j].instructions[i];
 
         await new Promise(resolve => setTimeout(resolve, 1000));
-  
-        this.actualLine = this.actualLine != 9 ? this.actualLine++ : 9;
 
         if(this.pipelineHistory[this.actualLine].WB.name != '') {
           this.results.Instrucoes++;
@@ -250,14 +250,15 @@ export class EscalarComponent {
         if(i != threads[0].instructions.length-1) this.results.Ciclos++;
         else break;
 
+        this.actualLine++;
         this.results.CPI = this.results.Instrucoes != 0 ? this.results.Ciclos/this.results.Instrucoes : 0;
+        this.dataSource2.data = this.getResultsArray();
       }
     }
   }
 
   async BMT(): Promise<void> {
     const threads = this.generateThreads(this.NUM_THREADS, this.THREAD_SIZE);
-    console.log(threads.toString());
   
     this.pipelineHistory.forEach(element => {
       element.IF = Instruction.null();
@@ -277,39 +278,43 @@ export class EscalarComponent {
 
           for(let k = 0; k < this.BLOCK_SIZE; k++) {
 
-            this.pipelineHistory[this.actualLine].WB = this.pipelineHistory[this.actualLine].MEM;
-            this.pipelineHistory[this.actualLine].MEM = this.pipelineHistory[this.actualLine].EX;
+            this.pipelineHistory[this.actualLine].WB = this.pipelineHistory[this.actualLine-1].MEM;
+            this.pipelineHistory[this.actualLine].MEM = this.pipelineHistory[this.actualLine-1].EX;
 
             // Verificar dependencia verdadeira
             if(
-              (this.pipelineHistory[this.actualLine].ID.rs1 != '' && this.pipelineHistory[this.actualLine].ID.rs2 != '') &&
-              (this.pipelineHistory[this.actualLine].WB.rd == this.pipelineHistory[this.actualLine].ID.rs1 ||
-               this.pipelineHistory[this.actualLine].WB.rd == this.pipelineHistory[this.actualLine].ID.rs2 ||
-               this.pipelineHistory[this.actualLine].MEM.rd == this.pipelineHistory[this.actualLine].ID.rs1 ||
-               this.pipelineHistory[this.actualLine].MEM.rd == this.pipelineHistory[this.actualLine].ID.rs2)
+              (this.pipelineHistory[this.actualLine-1].ID.rs1 != '' && this.pipelineHistory[this.actualLine-1].ID.rs2 != '') &&
+              (this.pipelineHistory[this.actualLine].WB.rd  == this.pipelineHistory[this.actualLine-1].ID.rs1 ||
+               this.pipelineHistory[this.actualLine].WB.rd  == this.pipelineHistory[this.actualLine-1].ID.rs2 ||
+               this.pipelineHistory[this.actualLine].MEM.rd == this.pipelineHistory[this.actualLine-1].ID.rs1 ||
+               this.pipelineHistory[this.actualLine].MEM.rd == this.pipelineHistory[this.actualLine-1].ID.rs2)
             )
             {
               // Bolha
-              this.pipelineHistory[this.actualLine].EX = Instruction.null();
+              this.pipelineHistory[this.actualLine].EX = Instruction.bubble(this.pipelineHistory[this.actualLine-1].ID.threadName);
+              this.pipelineHistory[this.actualLine].ID = this.pipelineHistory[this.actualLine-1].ID;
+              this.pipelineHistory[this.actualLine].IF = this.pipelineHistory[this.actualLine-1].IF;              
               this.results.Bolhas++;
               k--;
             } else {
-              this.pipelineHistory[this.actualLine].EX = this.pipelineHistory[this.actualLine].ID;
-              this.pipelineHistory[this.actualLine].ID = this.pipelineHistory[this.actualLine].IF;
+              this.pipelineHistory[this.actualLine].EX = this.pipelineHistory[this.actualLine-1].ID;
+              this.pipelineHistory[this.actualLine].ID = this.pipelineHistory[this.actualLine-1].IF;
               this.pipelineHistory[this.actualLine].IF = threads[j].instructions[i*this.BLOCK_SIZE+k];
             }
         
             await new Promise(resolve => setTimeout(resolve, 1000));
 
-            this.actualLine = this.actualLine != 9 ? this.actualLine++ : 9;
-
             if(this.pipelineHistory[this.actualLine].WB.name != '') {
               this.results.Instrucoes++;
             }
             
-            if(i != threadSize-1) this.results.Ciclos++;
+            if(i != threadSize-1) {
+              this.results.Ciclos++;
+            }
 
+            this.actualLine++;
             this.results.CPI = this.results.Instrucoes != 0 ? this.results.Ciclos/this.results.Instrucoes : 0;
+            this.dataSource2.data = this.getResultsArray();
           }
 
           finishedSMT = i==threadSize-1 ? true : false;
@@ -354,6 +359,8 @@ export class Instruction {
               return `${this.threadName}: ${this.name} ${this.rd}, ${this.imm}`;
           case 'F':
               return `${this.threadName}: ${this.name} ${this.rd}, ${this.rs1}, ${this.rs2}`;
+          case 'Bubble':
+              return `${this.threadName}: ${this.type}`;
           default:
               return '';
       }
@@ -363,16 +370,16 @@ export class Instruction {
     return new Instruction('', 'transparent', '', '', '', '', '', -1);
   }
 
-  static bubble(backgroundColor: string): Instruction {
-    return new Instruction('', backgroundColor, '', '', '', '', '', -1);
+  static bubble(threadName: string): Instruction {
+    return new Instruction(threadName, 'gray', 'Bubble', '', '', '', '', -1);
   }
 }
 
 export class Thread {
   instructions: Instruction[];
-  name: String;
+  name: string;
 
-  constructor(instructions: Instruction[], name: String) {
+  constructor(instructions: Instruction[], name: string) {
       this.instructions = instructions;
       this.name = name;
   }

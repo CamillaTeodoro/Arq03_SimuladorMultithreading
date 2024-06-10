@@ -16,7 +16,7 @@ mat-divider{
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: #f44336;
+    background-color: green;
     color: white;
     font-size: 20px;
     padding: 10px;
@@ -25,3 +25,9 @@ mat-divider{
     cursor: pointer;
     transition: 0.3s;
 }
+
+.scrollable-table {
+    max-height: 400px;
+    overflow-y: auto;
+    display: block;
+  }
