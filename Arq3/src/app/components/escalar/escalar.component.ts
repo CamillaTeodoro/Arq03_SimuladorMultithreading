@@ -26,28 +26,17 @@ export class EscalarComponent {
     this.cdRef.detectChanges();
   }
 
+  displayedColumns: string[] = ['#', 'IF', 'ID', 'EX', 'MEM', 'WB']; 
   pipelineHistory: ScalarPipeline[] = ScalarPipeline.getNullArray(100);
+  dataSource = new MatTableDataSource<ScalarPipeline>(this.pipelineHistory);
   actualLine = 1;
 
-  displayedColumns: string[] = ['IF', 'ID', 'EX', 'MEM', 'WB']; 
-
-  dataSource = new MatTableDataSource<ScalarPipeline>(this.pipelineHistory);
-
-  results = new InstructionResult;
-
   displayedColumns2: string[] = ['name', 'result'];
+  results = new InstructionResult;
+  dataSource2 = new MatTableDataSource<{ name: string, result: number }>(this.getResultsArray());
+  
 
   backgroundColors: string[] = ['green', 'red', 'orange', 'blue'];
-
-  getResultsArray(): { name: string, result: number }[] {
-    return Object.keys(this.results).map(key => ({
-      name: key,
-      result: (this.results as any)[key]
-    }));
-  }
-
-  dataSource2 = new MatTableDataSource<{ name: string, result: number }>(this.getResultsArray());
-
   instructionNames: string[] = [
     'ADD', 'SUB', 'AND', 'OR', 'XOR', 'SLL', 'SRL', 'SRA','SLT', 'SLTU',   // ULA
     'MUL', 'MULH', 'MULHSU', 'MULHU', 'DIV', 'DIVU', 'REM', 'REMU',        // ULA
@@ -55,6 +44,13 @@ export class EscalarComponent {
     'BEQ', 'BNE', 'BLT', 'BGE', 'BLTU', 'BGEU', 'JAL', 'JALR',             // DESVIO
     'FADD.S', 'FSUB.S', 'FMUL.S', 'FDIV.S', 'FSQRT.S'                      // PONTO FLUTUANTE
   ];
+
+  getResultsArray(): { name: string, result: number }[] {
+    return Object.keys(this.results).map(key => ({
+      name: key,
+      result: (this.results as any)[key]
+    }));
+  }
 
   getRandomInstructionName(): string {
       const randomIndex = Math.floor(Math.random() * this.instructionNames.length);

@@ -1,5 +1,11 @@
 
 <table mat-table [dataSource]="pipelineHistory" class="mat-elevation-z8 scrollable-table">
+
+  <ng-container matColumnDef="#">
+    <th mat-header-cell *matHeaderCellDef>#</th>
+    <td mat-cell *matCellDef="let id; let i = index">{{i}}</td>
+  </ng-container>
+
   <ng-container matColumnDef="IF">
     <th mat-header-cell *matHeaderCellDef>IF</th>
     <td mat-cell *matCellDef="let instruction">
@@ -52,7 +58,7 @@
   </ng-container>
   <ng-container matColumnDef="result">
     <th mat-header-cell *matHeaderCellDef>Resultado</th>
-    <td mat-cell *matCellDef="let result">{{ result.result }}</td>
+    <td mat-cell *matCellDef="let result">{{ +result.result.toFixed(2) }}</td>
   </ng-container>
 
   <tr mat-header-row *matHeaderRowDef="displayedColumns2"></tr>
