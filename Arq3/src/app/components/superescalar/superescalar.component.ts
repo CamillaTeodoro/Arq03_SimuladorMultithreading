@@ -157,6 +157,7 @@ export class SuperescalarComponent {
 
   async base(): Promise<void> {
     const threads = this.generateThreads(1, this.THREAD_SIZE);
+    console.log(threads);
   
     this.pipelineHistory.forEach((element) => {
       element.Pipeline1.IF = Instruction.null();
@@ -177,7 +178,7 @@ export class SuperescalarComponent {
   
     for (
       let i = 0;
-      i < threads[0].instructions.length + this.THREADS_PER_CORE - 1;
+      i < instructionQueue.length + this.THREADS_PER_CORE - 1;
       i++
     ) {
       if (i != threads[0].instructions.length - 2) {
@@ -248,18 +249,22 @@ export class SuperescalarComponent {
   }
 
   // Função para verificar dependência entre instruções
-  checkDependency(
-    instruction1: Instruction,
-    instruction2: Instruction
-  ): boolean {
-    if (
-      instruction1.rs1 == instruction2.rd ||
-      instruction1.rs2 == instruction2.rd
-    ) {
-      return false; // Existe dependência
-    }
-    return true; // Não existe dependência
+ checkDependency(instruction1: Instruction, instruction2: Instruction): boolean {
+  // Verifica se as instruções são válidas (não nulas)
+  if (!instruction1 || !instruction2) {
+    return true; // Não há dependência se uma das instruções for nula
   }
+
+  // Verifica dependência de dados
+  if (
+    instruction1.rs1 === instruction2.rd ||
+    instruction1.rs2 === instruction2.rd
+  ) {
+    return false; // Existe dependência
+  }
+
+  return true; // Não existe dependência
+}
 
   // async IMT(): Promise<void> {
   //   const threads = this.generateThreads(this.NUM_THREADS, this.THREAD_SIZE);
