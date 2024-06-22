@@ -1,6 +1,6 @@
 import { Component, Input,  ChangeDetectorRef } from '@angular/core';
 import { MatTableDataSource } from '@angular/material/table';
-import { SuperescalarComponent } from '../superescalar/superescalar.component';
+
 
 export class InstructionResult {
   CPI: number = 0; 

@@ -1,69 +1,107 @@
-<mat-table [dataSource]="dataSource" class="mat-elevation-z8">
-  <ng-container matColumnDef="ciclo">
-    <mat-header-cell *matHeaderCellDef>Ciclo</mat-header-cell>
-    <mat-cell *matCellDef="let element">{{ element.ciclo }}</mat-cell>
+<table
+  mat-table
+  [dataSource]="pipelineHistory"
+  class="mat-elevation-z8 scrollable-table"
+>
+  <ng-container matColumnDef="#">
+    <th mat-header-cell *matHeaderCellDef>#</th>
+    <td mat-cell *matCellDef="let id; let i = index">{{ i }}</td>
   </ng-container>
 
-  <ng-container matColumnDef="decodificacao">
-    <mat-header-cell *matHeaderCellDef>Decodificação</mat-header-cell>
-    <mat-cell
-      *matCellDef="let element"
-      [attr.colspan]="element.decodificacao.length"
-    >
-      <div class="stage-container">
-        <div
-          *ngFor="let instruction of element.decodificacao"
-          class="instruction"
-          [style.background-color]="instruction.color"
-        >
-          {{ instruction.name }}
-        </div>
+  <!-- Pipeline 1 -->
+  <ng-container matColumnDef="IF1">
+    <th mat-header-cell *matHeaderCellDef>IF1</th>
+    <td mat-cell *matCellDef="let instruction">
+      <div [style.background-color]="instruction.Pipeline1.IF.backgroundColor">
+        {{ instruction.Pipeline1.IF.toString() }}
       </div>
-    </mat-cell>
+    </td>
   </ng-container>
 
-  <ng-container matColumnDef="execucao">
-    <mat-header-cell *matHeaderCellDef>Execução</mat-header-cell>
-    <mat-cell
-      *matCellDef="let element"
-      [attr.colspan]="element.execucao.length"
-    >
-      <div class="stage-container">
-        <div
-          *ngFor="let instruction of element.execucao"
-          class="instruction"
-          [style.background-color]="instruction.color"
-        >
-          {{ instruction.name }}
-        </div>
+  <ng-container matColumnDef="ID1">
+    <th mat-header-cell *matHeaderCellDef>ID1</th>
+    <td mat-cell *matCellDef="let instruction">
+      <div [style.background-color]="instruction.Pipeline1.ID.backgroundColor">
+        {{ instruction.Pipeline1.ID.toString() }}
       </div>
-    </mat-cell>
+    </td>
   </ng-container>
 
-  <ng-container matColumnDef="writeback">
-    <mat-header-cell *matHeaderCellDef>Write-Back</mat-header-cell>
-    <mat-cell
-      *matCellDef="let element"
-      [attr.colspan]="element.writeback.length"
-    >
-      <div class="stage-container">
-        <div
-          *ngFor="let instruction of element.writeback"
-          class="instruction"
-          [style.background-color]="instruction.color"
-        >
-          {{ instruction.name }}
-        </div>
+  <ng-container matColumnDef="EX1">
+    <th mat-header-cell *matHeaderCellDef>EX1</th>
+    <td mat-cell *matCellDef="let instruction">
+      <div [style.background-color]="instruction.Pipeline1.EX.backgroundColor">
+        {{ instruction.Pipeline1.EX.toString() }}
       </div>
-    </mat-cell>
+    </td>
   </ng-container>
 
-  <mat-header-row *matHeaderRowDef="displayedColumns"></mat-header-row>
-  <mat-row *matRowDef="let row; columns: displayedColumns"></mat-row>
-</mat-table>
+  <ng-container matColumnDef="MEM1">
+    <th mat-header-cell *matHeaderCellDef>MEM1</th>
+    <td mat-cell *matCellDef="let instruction">
+      <div [style.background-color]="instruction.Pipeline1.MEM.backgroundColor">
+        {{ instruction.Pipeline1.MEM.toString() }}
+      </div>
+    </td>
+  </ng-container>
+
+  <ng-container matColumnDef="WB1">
+    <th mat-header-cell *matHeaderCellDef>WB1</th>
+    <td mat-cell *matCellDef="let instruction">
+      <div [style.background-color]="instruction.Pipeline1.WB.backgroundColor">
+        {{ instruction.Pipeline1.WB.toString() }}
+      </div>
+    </td>
+  </ng-container>
+
+  <!-- Pipeline 2 (mesma estrutura do Pipeline 1) -->
+  <ng-container matColumnDef="IF2">
+    <th mat-header-cell *matHeaderCellDef>IF2</th>
+    <td mat-cell *matCellDef="let instruction">
+      <div [style.background-color]="instruction.Pipeline2.IF.backgroundColor">
+        {{ instruction.Pipeline2.IF.toString() }}
+      </div>
+    </td>
+  </ng-container>
+  <ng-container matColumnDef="ID2">
+    <th mat-header-cell *matHeaderCellDef>ID2</th>
+    <td mat-cell *matCellDef="let instruction">
+      <div [style.background-color]="instruction.Pipeline2.ID.backgroundColor">
+        {{ instruction.Pipeline2.ID.toString() }}
+      </div>
+    </td>
+  </ng-container>
+  <ng-container matColumnDef="EX2">
+    <th mat-header-cell *matHeaderCellDef>EX2</th>
+    <td mat-cell *matCellDef="let instruction">
+      <div [style.background-color]="instruction.Pipeline2.EX.backgroundColor">
+        {{ instruction.Pipeline2.EX.toString() }}
+      </div>
+    </td>
+  </ng-container>
+  <ng-container matColumnDef="MEM2">
+    <th mat-header-cell *matHeaderCellDef>MEM2</th>
+    <td mat-cell *matCellDef="let instruction">
+      <div [style.background-color]="instruction.Pipeline2.MEM.backgroundColor">
+        {{ instruction.Pipeline2.MEM.toString() }}
+      </div>
+    </td>
+  </ng-container>
+  <ng-container matColumnDef="WB2">
+    <th mat-header-cell *matHeaderCellDef>WB2</th>
+    <td mat-cell *matCellDef="let instruction">
+      <div [style.background-color]="instruction.Pipeline2.WB.backgroundColor">
+        {{ instruction.Pipeline2.WB.toString() }}
+      </div>
+    </td>
+  </ng-container>
+
+  <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+  <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+</table>
 
 <div class="btn">
-  <button mat-raised-button color="primary" (click)="{}">Simular</button>
+  <button mat-raised-button color="primary" (click)="start()">Simular</button>
 </div>
 
 <mat-divider></mat-divider>
