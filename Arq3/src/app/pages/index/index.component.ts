@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import {MatSidenavModule} from '@angular/material/sidenav';
 
 @Component({
   selector: 'app-index',
@@ -6,5 +7,12 @@ import { Component } from '@angular/core';
   styleUrls: ['./index.component.scss']
 })
 export class IndexComponent {
+  arquitetura: string = '';
+  tipo: string = '';
 
+  onArquiteturaChange(event: { arquitetura: string, tipo: string }) {
+    this.arquitetura = event.arquitetura;
+    this.tipo = event.tipo;
+    console.log(event);
+  }
 }
