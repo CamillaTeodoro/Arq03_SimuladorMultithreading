@@ -171,15 +171,16 @@ export class SuperescalarComponent {
       element.ID = Instruction.nullArray(IDSize);
       element.JANELA = Instruction.nullArray(JANELASize);
       element.EX = [
-        new FunctionalUnit('ULA', 4),
-        new FunctionalUnit('Desvio', 2),
-        new FunctionalUnit('Memória', 2)
+        new Array(120).fill(new FunctionalUnit('ULA', 4)),
+        new Array(120).fill(new FunctionalUnit('Desvio', 2)),
+        new Array(120).fill(new FunctionalUnit('Memória', 2))
       ];
       element.WB = Instruction.nullArray(WBSize);
     });
 
     let instructionIndex = 0;
-    while (instructionIndex < threads[0].instructions.length) {
+    let finished = false;
+    while (!finished) {
 
       // Finalizar instrucoes em WB
       for(let j = 0; j < WBSize; j++) {
@@ -190,13 +191,12 @@ export class SuperescalarComponent {
       let nextWBIndex = 0;
 
       for(let j = 0; j < EXSize; j++) {
-        let currentFunctionalUnit = this.pipelineHistory[this.actualLine-1].EX[j];
+        let currentFunctionalUnit = this.pipelineHistory[this.actualLine-1].EX[this.actualLine-1][j];
 
         // Move todas as instruções da unidade funcional atual para WB
         for(let index = 0; index < currentFunctionalUnit.ocupation; index++) {
           this.pipelineHistory[this.actualLine].WB[nextWBIndex++] = currentFunctionalUnit.instructions[index];
         }
-        currentFunctionalUnit.clear();
       }
 
       // Mover da Janela para a EX
@@ -205,7 +205,7 @@ export class SuperescalarComponent {
         let instruction = this.pipelineHistory[this.actualLine-1].JANELA[j];
 
         // Inserir nas Unidades Funcionais
-        let hasInsert = this.pipelineHistory[this.actualLine].updateExecution(instruction);
+        let hasInsert = this.pipelineHistory[this.actualLine].updateExecution(instruction, this.actualLine);
         
         // Se nao tinha espaco livre para aquela instrucao, repetir na janela de novo
         if (!hasInsert && instruction.name !== '') {
@@ -213,11 +213,11 @@ export class SuperescalarComponent {
         }
       }
 
-      // Mover do ID para a janela
       let IDIndex = 0;
 
       // TODO: Verificar Dependencia
 
+      // Mover do ID para a janela
       // Enquanto tiver espaco livre na janela
       while(janelaIndex < JANELASize && IDIndex < IDSize) {
         let instruction = this.pipelineHistory[this.actualLine-1].ID[IDIndex++];
@@ -246,6 +246,11 @@ export class SuperescalarComponent {
       }
 
       await new Promise(resolve => setTimeout(resolve, 1000));
+
+      finished = instructionIndex >= threads[0].instructions.length &&
+                 this.pipelineHistory[this.actualLine].WB[0].name === '';
+
+      this.actualLine++;
 
     //   if(i != threads[0].instructions.length-2) {
     //     this.results.Ciclos++;
@@ -619,16 +624,16 @@ export class FunctionalUnit {
 export class SuperScalarPipeline {
   ID: Instruction[];
   JANELA: Instruction[];
-  EX: FunctionalUnit[];
+  EX: FunctionalUnit[][];
   WB: Instruction[];
 
   constructor() {
     this.ID = Instruction.nullArray(5);
     this.JANELA = Instruction.nullArray(5);
     this.EX = [
-      new FunctionalUnit('ULA', 4),
-      new FunctionalUnit('Desvio', 2),
-      new FunctionalUnit('Memória', 2)
+      new Array(120).fill(new FunctionalUnit('ULA', 4)),
+      new Array(120).fill(new FunctionalUnit('Desvio', 2)),
+      new Array(120).fill(new FunctionalUnit('Memória', 2))
     ];
     this.WB = Instruction.nullArray(8);
   }
@@ -641,7 +646,7 @@ export class SuperScalarPipeline {
     return pipelines;
   }
 
-  updateExecution(instruction: Instruction): boolean {
+  updateExecution(instruction: Instruction, actualLine: number): boolean {
 
     // Instrucao null
     if(instruction.name === '') return false;
@@ -652,13 +657,13 @@ export class SuperScalarPipeline {
     const memInstructions = new Set(['LB', 'LH', 'LW', 'LBU', 'LHU', 'SB', 'SH', 'SW']);
 
     if (aluInstructions.has(instruction.name)) {
-      return this.EX[0].insert(instruction);
+      return this.EX[actualLine][0].insert(instruction);
 
     } else if (branchInstructions.has(instruction.name)) {
-      return this.EX[1].insert(instruction)
+      return this.EX[actualLine][1].insert(instruction)
 
     } else if (memInstructions.has(instruction.name)) {
-      return this.EX[2].insert(instruction)
+      return this.EX[actualLine][2].insert(instruction)
 
     } else {
       return false;
