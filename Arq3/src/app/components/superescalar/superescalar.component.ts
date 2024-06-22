@@ -27,7 +27,7 @@ export class SuperescalarComponent {
     this.cdRef.detectChanges();
   }
 
-  displayedColumns: string[] = ['#', 'IF1', 'ID1', 'EX1', 'MEM1', 'WB1', 'IF2', 'ID2', 'EX2', 'MEM2', 'WB2'];
+  displayedColumns: string[] = ['#', 'IF1', 'IF2', 'ID1', 'ID2', 'EX1', 'EX2', 'MEM1', 'MEM2','WB1','WB2'];
   pipelineHistory: SuperScalarPipeline[] = SuperScalarPipeline.getNullArray(120);
   dataSource = new MatTableDataSource<SuperScalarPipeline>(this.pipelineHistory);
   actualLine = 1;
@@ -39,7 +39,7 @@ export class SuperescalarComponent {
   );
   
 
-  backgroundColors: string[] = ['green', 'red', 'orange', 'blue'];
+  backgroundColors: string[] = ['green', 'red', 'orange', 'pink'];
   instructionNames: string[] = [
     'ADD', 'SUB', 'AND', 'OR', 'XOR', 'SLL', 'SRL', 'SRA','SLT', 'SLTU',   // ULA
     'MUL', 'MULH', 'MULHSU', 'MULHU', 'DIV', 'DIVU', 'REM', 'REMU',        // ULA
@@ -148,7 +148,7 @@ export class SuperescalarComponent {
     switch (this.tipo) {
       case 'Base': this.base(); break;
       //case 'IMT':  this.IMT();  break;
-     // case 'BMT':  this.BMT();  break;
+     case 'BMT':  this.BMT();  break;
       // case 'SMT':  this.SMT();  break;
       
       default : console.log('error');
@@ -157,7 +157,6 @@ export class SuperescalarComponent {
 
   async base(): Promise<void> {
     const threads = this.generateThreads(1, this.THREAD_SIZE);
-    console.log(threads);
   
     this.pipelineHistory.forEach((element) => {
       element.Pipeline1.IF = Instruction.null();
@@ -214,6 +213,7 @@ export class SuperescalarComponent {
         this.pipelineHistory[this.actualLine].Pipeline1.IF =
           instructionQueue.shift()!;
       }
+      
       if (
         !pipelineStalled &&
         instructionQueue.length > 0 &&
@@ -254,16 +254,13 @@ export class SuperescalarComponent {
   if (!instruction1 || !instruction2) {
     return true; // Não há dependência se uma das instruções for nula
   }
-
-  // Verifica dependência de dados
   if (
     instruction1.rs1 === instruction2.rd ||
     instruction1.rs2 === instruction2.rd
   ) {
-    return false; // Existe dependência
+    return false; 
   }
-
-  return true; // Não existe dependência
+  return true; 
 }
 
   // async IMT(): Promise<void> {
@@ -304,84 +301,90 @@ export class SuperescalarComponent {
   //   }
   // }
 
-  // async BMT(): Promise<void> {
-  //   const threads = this.generateThreads(this.NUM_THREADS, this.THREAD_SIZE);
+  async BMT(): Promise<void> {
+    const threads = this.generateThreads(this.NUM_THREADS, this.THREAD_SIZE);
   
-  //   this.pipelineHistory.forEach(element => {
-  //     element.IF = Instruction.null();
-  //     element.ID = Instruction.null();
-  //     element.EX = Instruction.null();
-  //     element.MEM = Instruction.null();
-  //     element.WB = Instruction.null();
-  //   });
-
-  //   let finishedSMT = false;
-  //   let threadSize = threads[0].instructions.length/this.BLOCK_SIZE;
-
-  //   console.log(threadSize)
-
-  //   for (let i = 0; i < threadSize; i++) {   // Considerando que todas threads têm mesmo tamanho
-  //     for(let j = 0; j < this.NUM_THREADS; j++) {
-
-  //       if (!finishedSMT) {
-
-  //         finishedSMT = i==threadSize-1 ? true : false;
-
-  //         for(let k = 0; k < this.BLOCK_SIZE; k++) {
-
-  //           if(!finishedSMT || k !== this.BLOCK_SIZE-1) {
-  //             this.results.Ciclos++;
-  //             this.dataSource2.data = this.getResultsArray(); 
-  //           }
-
-  //           this.pipelineHistory[this.actualLine].WB = this.pipelineHistory[this.actualLine-1].MEM;
-  //           this.pipelineHistory[this.actualLine].MEM = this.pipelineHistory[this.actualLine-1].EX;
-
-  //           // Verificar dependencia verdadeira
-  //           if(
-  //             (this.pipelineHistory[this.actualLine-1].ID.rs1 != '' && this.pipelineHistory[this.actualLine-1].ID.rs2 != '') 
-              
-  //             &&
-  //             ((this.pipelineHistory[this.actualLine].WB.rd  == this.pipelineHistory[this.actualLine-1].ID.rs1 ||
-  //               this.pipelineHistory[this.actualLine].WB.rd  == this.pipelineHistory[this.actualLine-1].ID.rs2) && 
-  //               (this.pipelineHistory[this.actualLine].WB.threadName == this.pipelineHistory[this.actualLine-1].ID.threadName)
-               
-  //              ||
-      
-  //              (this.pipelineHistory[this.actualLine].MEM.rd  == this.pipelineHistory[this.actualLine-1].ID.rs1 ||
-  //               this.pipelineHistory[this.actualLine].MEM.rd  == this.pipelineHistory[this.actualLine-1].ID.rs2) && 
-  //               (this.pipelineHistory[this.actualLine].MEM.threadName == this.pipelineHistory[this.actualLine-1].ID.threadName)
-  //             )
-  //           )
-  //           {
-  //             // Bolha
-  //             this.pipelineHistory[this.actualLine].EX = Instruction.bubble(this.pipelineHistory[this.actualLine-1].ID.threadName);
-  //             this.pipelineHistory[this.actualLine].ID = this.pipelineHistory[this.actualLine-1].ID;
-  //             this.pipelineHistory[this.actualLine].IF = this.pipelineHistory[this.actualLine-1].IF;              
-  //             this.results.Bolhas++;
-  //             k--;
-  //           } else {
-  //             this.pipelineHistory[this.actualLine].EX = this.pipelineHistory[this.actualLine-1].ID;
-  //             this.pipelineHistory[this.actualLine].ID = this.pipelineHistory[this.actualLine-1].IF;
-  //             this.pipelineHistory[this.actualLine].IF = threads[j].instructions[i*this.BLOCK_SIZE+k];
-  //           }
-        
-  //           if(this.pipelineHistory[this.actualLine].WB.name !== '') {
-  //             this.results.Instrucoes++;
-  //           }
+    // Inicializa os pipelines com instruções nulas
+    this.pipelineHistory.forEach(element => {
+      element.Pipeline1.IF = Instruction.null();
+      element.Pipeline1.ID = Instruction.null();
+      element.Pipeline1.EX = Instruction.null();
+      element.Pipeline1.MEM = Instruction.null();
+      element.Pipeline1.WB = Instruction.null();
+  
+      element.Pipeline2.IF = Instruction.null();
+      element.Pipeline2.ID = Instruction.null();
+      element.Pipeline2.EX = Instruction.null();
+      element.Pipeline2.MEM = Instruction.null();
+      element.Pipeline2.WB = Instruction.null();
+    });
+  
+    let finishedBMT = false;
+    let threadSize = threads[0].instructions.length/this.BLOCK_SIZE;
+  
+    for (let i = 0; i < threadSize; i++) {   
+      for(let j = 0; j < this.NUM_THREADS; j++) {
+  
+        if (!finishedBMT) {
+  
+          finishedBMT = i==threadSize-1 ? true : false;
+  
+          for(let k = 0; k < this.BLOCK_SIZE; k++) {
+  
+            if(!finishedBMT || k !== this.BLOCK_SIZE-1) {
+              this.results.Ciclos++;
+              this.dataSource2.data = this.getResultsArray(); 
+            }
+  
+            // Atualiza as etapas do pipeline para cada pipeline
+            this.pipelineHistory[this.actualLine].Pipeline1.EX = this.pipelineHistory[this.actualLine-1].Pipeline1.ID;
+            this.pipelineHistory[this.actualLine].Pipeline1.ID = this.pipelineHistory[this.actualLine-1].Pipeline1.IF;
+            this.pipelineHistory[this.actualLine].Pipeline1.IF = threads[j].instructions[i*this.BLOCK_SIZE+k];
+  
+            this.pipelineHistory[this.actualLine].Pipeline2.EX = this.pipelineHistory[this.actualLine-1].Pipeline2.ID;
+            this.pipelineHistory[this.actualLine].Pipeline2.ID = this.pipelineHistory[this.actualLine-1].Pipeline2.IF;
+            this.pipelineHistory[this.actualLine].Pipeline2.IF = threads[j].instructions[i*this.BLOCK_SIZE+k+1];
+  
+            // Verificar se a instrução é de acesso à memória
+            if (['LB', 'LH', 'LW', 'LBU', 'LHU', 'SB', 'SH', 'SW'].includes(this.pipelineHistory[this.actualLine].Pipeline1.IF.name) ||
+                ['LB', 'LH', 'LW', 'LBU', 'LHU', 'SB', 'SH', 'SW'].includes(this.pipelineHistory[this.actualLine].Pipeline2.IF.name)) {
+              // Despejar os pipelines e trocar a thread
+              for(let l = 0; l < 4; l++) {
+                this.pipelineHistory[this.actualLine].Pipeline1.WB = this.pipelineHistory[this.actualLine-1].Pipeline1.MEM;
+                this.pipelineHistory[this.actualLine].Pipeline1.MEM = this.pipelineHistory[this.actualLine-1].Pipeline1.EX;
+                this.pipelineHistory[this.actualLine].Pipeline1.EX = this.pipelineHistory[this.actualLine-1].Pipeline1.ID;
+                this.pipelineHistory[this.actualLine].Pipeline1.ID = this.pipelineHistory[this.actualLine-1].Pipeline1.IF;
+                this.pipelineHistory[this.actualLine].Pipeline1.IF = Instruction.null();
+  
+                this.pipelineHistory[this.actualLine].Pipeline2.WB = this.pipelineHistory[this.actualLine-1].Pipeline2.MEM;
+                this.pipelineHistory[this.actualLine].Pipeline2.MEM = this.pipelineHistory[this.actualLine-1].Pipeline2.EX;
+                this.pipelineHistory[this.actualLine].Pipeline2.EX = this.pipelineHistory[this.actualLine-1].Pipeline2.ID;
+                this.pipelineHistory[this.actualLine].Pipeline2.ID = this.pipelineHistory[this.actualLine-1].Pipeline2.IF;
+                this.pipelineHistory[this.actualLine].Pipeline2.IF = Instruction.null();
+  
+                this.actualLine++;
+                await new Promise(resolve => setTimeout(resolve, 1000));
+              }
+  
+              // Trocar a thread
+              j = (j + 1) % this.NUM_THREADS;
+              k = -1; // Para reiniciar o loop de instruções para a nova thread
+              break;
+            }
+            if(this.pipelineHistory[this.actualLine].Pipeline1.WB.name !== '' || this.pipelineHistory[this.actualLine].Pipeline2.WB.name !== '') {
+              this.results.Instrucoes++;
+            }
             
-  //           this.actualLine++;
-  //           this.results.IPC = this.results.Instrucoes != 0 ? this.results.Ciclos/this.results.Instrucoes : 0;
-  //           this.dataSource2.data = this.getResultsArray();
-
-  //           await new Promise(resolve => setTimeout(resolve, 1000));
-  //         }
-
-  //         console.log(finishedSMT);
-  //       }
-  //     }
-  //   }
-  // }
+            this.actualLine++;
+            this.results.IPC = this.results.Instrucoes != 0 ? this.results.Ciclos/this.results.Instrucoes : 0;
+            this.dataSource2.data = this.getResultsArray();
+  
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+      }
+    }
+  }
 }
 
 export class Instruction {

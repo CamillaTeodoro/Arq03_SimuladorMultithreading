@@ -8,12 +8,20 @@
     <td mat-cell *matCellDef="let id; let i = index">{{ i }}</td>
   </ng-container>
 
-  <!-- Pipeline 1 -->
   <ng-container matColumnDef="IF1">
     <th mat-header-cell *matHeaderCellDef>IF1</th>
     <td mat-cell *matCellDef="let instruction">
       <div [style.background-color]="instruction.Pipeline1.IF.backgroundColor">
         {{ instruction.Pipeline1.IF.toString() }}
+      </div>
+    </td>
+  </ng-container>
+
+  <ng-container matColumnDef="IF2">
+    <th mat-header-cell *matHeaderCellDef>IF2</th>
+    <td mat-cell *matCellDef="let instruction">
+      <div [style.background-color]="instruction.Pipeline2.IF.backgroundColor">
+        {{ instruction.Pipeline2.IF.toString() }}
       </div>
     </td>
   </ng-container>
@@ -27,11 +35,29 @@
     </td>
   </ng-container>
 
+  <ng-container matColumnDef="ID2">
+    <th mat-header-cell *matHeaderCellDef>ID2</th>
+    <td mat-cell *matCellDef="let instruction">
+      <div [style.background-color]="instruction.Pipeline2.ID.backgroundColor">
+        {{ instruction.Pipeline2.ID.toString() }}
+      </div>
+    </td>
+  </ng-container>
+
   <ng-container matColumnDef="EX1">
     <th mat-header-cell *matHeaderCellDef>EX1</th>
     <td mat-cell *matCellDef="let instruction">
       <div [style.background-color]="instruction.Pipeline1.EX.backgroundColor">
         {{ instruction.Pipeline1.EX.toString() }}
+      </div>
+    </td>
+  </ng-container>
+
+  <ng-container matColumnDef="EX2">
+    <th mat-header-cell *matHeaderCellDef>EX2</th>
+    <td mat-cell *matCellDef="let instruction">
+      <div [style.background-color]="instruction.Pipeline2.EX.backgroundColor">
+        {{ instruction.Pipeline2.EX.toString() }}
       </div>
     </td>
   </ng-container>
@@ -45,6 +71,15 @@
     </td>
   </ng-container>
 
+  <ng-container matColumnDef="MEM2">
+    <th mat-header-cell *matHeaderCellDef>MEM2</th>
+    <td mat-cell *matCellDef="let instruction">
+      <div [style.background-color]="instruction.Pipeline2.MEM.backgroundColor">
+        {{ instruction.Pipeline2.MEM.toString() }}
+      </div>
+    </td>
+  </ng-container>
+
   <ng-container matColumnDef="WB1">
     <th mat-header-cell *matHeaderCellDef>WB1</th>
     <td mat-cell *matCellDef="let instruction">
@@ -54,39 +89,6 @@
     </td>
   </ng-container>
 
-  <!-- Pipeline 2 (mesma estrutura do Pipeline 1) -->
-  <ng-container matColumnDef="IF2">
-    <th mat-header-cell *matHeaderCellDef>IF2</th>
-    <td mat-cell *matCellDef="let instruction">
-      <div [style.background-color]="instruction.Pipeline2.IF.backgroundColor">
-        {{ instruction.Pipeline2.IF.toString() }}
-      </div>
-    </td>
-  </ng-container>
-  <ng-container matColumnDef="ID2">
-    <th mat-header-cell *matHeaderCellDef>ID2</th>
-    <td mat-cell *matCellDef="let instruction">
-      <div [style.background-color]="instruction.Pipeline2.ID.backgroundColor">
-        {{ instruction.Pipeline2.ID.toString() }}
-      </div>
-    </td>
-  </ng-container>
-  <ng-container matColumnDef="EX2">
-    <th mat-header-cell *matHeaderCellDef>EX2</th>
-    <td mat-cell *matCellDef="let instruction">
-      <div [style.background-color]="instruction.Pipeline2.EX.backgroundColor">
-        {{ instruction.Pipeline2.EX.toString() }}
-      </div>
-    </td>
-  </ng-container>
-  <ng-container matColumnDef="MEM2">
-    <th mat-header-cell *matHeaderCellDef>MEM2</th>
-    <td mat-cell *matCellDef="let instruction">
-      <div [style.background-color]="instruction.Pipeline2.MEM.backgroundColor">
-        {{ instruction.Pipeline2.MEM.toString() }}
-      </div>
-    </td>
-  </ng-container>
   <ng-container matColumnDef="WB2">
     <th mat-header-cell *matHeaderCellDef>WB2</th>
     <td mat-cell *matCellDef="let instruction">
