@@ -364,7 +364,7 @@ export class Instruction {
   }
 
   static null(): Instruction {
-    return new Instruction('VAZIO', 'pink', '', '', '', '', '', -1);
+    return new Instruction('', 'transparent', '', '', '', '', '', -1);
   }
 
   static bubble(threadName: string): Instruction {
