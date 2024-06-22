@@ -27,7 +27,7 @@ export class EscalarComponent {
   }
 
   displayedColumns: string[] = ['#', 'IF', 'ID', 'EX', 'MEM', 'WB']; 
-  pipelineHistory: ScalarPipeline[] = ScalarPipeline.getNullArray(100);
+  pipelineHistory: ScalarPipeline[] = ScalarPipeline.getNullArray(120);
   dataSource = new MatTableDataSource<ScalarPipeline>(this.pipelineHistory);
   actualLine = 1;
 
@@ -162,6 +162,11 @@ export class EscalarComponent {
     });
   
     for (let i = 0; i < threads[0].instructions.length; i++) {
+
+      if(i != threads[0].instructions.length-2) {
+        this.results.Ciclos++;
+      }
+
       this.pipelineHistory[this.actualLine].WB = this.pipelineHistory[this.actualLine-1].MEM;
       this.pipelineHistory[this.actualLine].MEM = this.pipelineHistory[this.actualLine-1].EX;
 
@@ -186,19 +191,15 @@ export class EscalarComponent {
         this.pipelineHistory[this.actualLine].IF = threads[0].instructions[i];
       }
   
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      if(this.pipelineHistory[this.actualLine-1].WB.name != '') {
+      if(this.pipelineHistory[this.actualLine].WB.name != '') {
         this.results.Instrucoes++;
-      }
-      
-      if(i != threads[0].instructions.length-2) {
-        this.results.Ciclos++;
       }
 
       this.actualLine++;
       this.results.CPI = this.results.Instrucoes != 0 ? this.results.Ciclos/this.results.Instrucoes : 0;
       this.dataSource2.data = this.getResultsArray();
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
   }
 
@@ -215,24 +216,27 @@ export class EscalarComponent {
   
     for (let i = 0; i < threads[0].instructions.length; i++) {   // Considerando que todas threads têm mesmo tamanho
       for(let j = 0; j < this.NUM_THREADS; j++) {
+
+        if(i != threads[0].instructions.length-1) {
+          this.results.Ciclos++;
+          this.dataSource2.data = this.getResultsArray();
+        } else break;
+
         this.pipelineHistory[this.actualLine].WB = this.pipelineHistory[this.actualLine-1].MEM;
         this.pipelineHistory[this.actualLine].MEM = this.pipelineHistory[this.actualLine-1].EX;
         this.pipelineHistory[this.actualLine].EX = this.pipelineHistory[this.actualLine-1].ID;
         this.pipelineHistory[this.actualLine].ID = this.pipelineHistory[this.actualLine-1].IF;
         this.pipelineHistory[this.actualLine].IF = threads[j].instructions[i];
 
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
         if(this.pipelineHistory[this.actualLine].WB.name != '') {
           this.results.Instrucoes++;
         }
 
-        if(i != threads[0].instructions.length-1) this.results.Ciclos++;
-        else break;
-
         this.actualLine++;
         this.results.CPI = this.results.Instrucoes != 0 ? this.results.Ciclos/this.results.Instrucoes : 0;
         this.dataSource2.data = this.getResultsArray();
+
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
   }
@@ -249,14 +253,23 @@ export class EscalarComponent {
     });
 
     let finishedSMT = false;
-    let threadSize = threads[0].instructions.length/this.BLOCK_SIZE + 1;
+    let threadSize = threads[0].instructions.length/this.BLOCK_SIZE;
+
+    console.log(threadSize)
 
     for (let i = 0; i < threadSize; i++) {   // Considerando que todas threads têm mesmo tamanho
       for(let j = 0; j < this.NUM_THREADS; j++) {
 
         if (!finishedSMT) {
 
+          finishedSMT = i==threadSize-1 ? true : false;
+
           for(let k = 0; k < this.BLOCK_SIZE; k++) {
+
+            if(!finishedSMT || k !== this.BLOCK_SIZE-1) {
+              this.results.Ciclos++;
+              this.dataSource2.data = this.getResultsArray(); 
+            }
 
             this.pipelineHistory[this.actualLine].WB = this.pipelineHistory[this.actualLine-1].MEM;
             this.pipelineHistory[this.actualLine].MEM = this.pipelineHistory[this.actualLine-1].EX;
@@ -290,22 +303,18 @@ export class EscalarComponent {
               this.pipelineHistory[this.actualLine].IF = threads[j].instructions[i*this.BLOCK_SIZE+k];
             }
         
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            if(this.pipelineHistory[this.actualLine].WB.name != '') {
+            if(this.pipelineHistory[this.actualLine].WB.name !== '') {
               this.results.Instrucoes++;
             }
             
-            if(i != threadSize-1) {
-              this.results.Ciclos++;
-            }
-
             this.actualLine++;
             this.results.CPI = this.results.Instrucoes != 0 ? this.results.Ciclos/this.results.Instrucoes : 0;
             this.dataSource2.data = this.getResultsArray();
+
+            await new Promise(resolve => setTimeout(resolve, 1000));
           }
 
-          finishedSMT = i==threadSize-1 ? true : false;
+          console.log(finishedSMT);
         }
       }
     }
@@ -355,7 +364,7 @@ export class Instruction {
   }
 
   static null(): Instruction {
-    return new Instruction('', 'transparent', '', '', '', '', '', -1);
+    return new Instruction('VAZIO', 'pink', '', '', '', '', '', -1);
   }
 
   static bubble(threadName: string): Instruction {
