@@ -1,7 +1,6 @@
 import { Component, Input,  ChangeDetectorRef } from '@angular/core';
 import { MatTableDataSource } from '@angular/material/table';
 
-
 export class InstructionResult {
   CPI: number = 0; 
   Bolhas: number = 0;
