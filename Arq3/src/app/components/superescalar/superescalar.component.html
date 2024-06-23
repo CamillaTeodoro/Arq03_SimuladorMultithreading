@@ -50,7 +50,10 @@
 </table>
 
 <div class="btn">
-  <button mat-raised-button color="primary" (click)="start()">Simular</button>
+  <button *ngIf="step === 1" mat-raised-button color="primary" (click)="saveThreads(); step = 2;">Gerar Threads</button>
+  <input type="file" #fileInput style="display: none" (change)="loadThreads($event)">
+  <button *ngIf="step === 2" mat-raised-button color="primary" (click)="fileInput.click(); step = 3">Carregar Threads</button>
+  <button *ngIf="step === 3" mat-raised-button color="primary" (click)="start(); step = 4;">Simular</button>
 </div>
 
 <mat-divider></mat-divider>

@@ -1,5 +1,6 @@
 import { Component, Input,  ChangeDetectorRef } from '@angular/core';
 import { MatTableDataSource } from '@angular/material/table';
+import { saveAs } from 'file-saver';
 
 export class InstructionResult {
   CPI: number = 0; 
@@ -34,6 +35,9 @@ export class EscalarComponent {
   results = new InstructionResult;
   dataSource2 = new MatTableDataSource<{ name: string, result: number }>(this.getResultsArray());
   
+  threads: Thread[] = [];
+  buttonText = 'Gerar Thread';
+  step = 1;
 
   backgroundColors: string[] = ['green', 'red', 'orange', 'blue'];
   instructionNames: string[] = [
@@ -61,6 +65,10 @@ export class EscalarComponent {
 
   getRandomImmediate(): number {
     return Math.floor(Math.random() * 1000);
+  }
+
+  changeButtonText(newText: string): void {
+    this.buttonText = newText;
   }
 
   generateInstruction(threadName: string, backgroundColor: string): Instruction {
@@ -129,7 +137,15 @@ export class EscalarComponent {
     return instructions;
   }
 
-  generateThreads(n: number, length: number): Thread[] {
+  saveThreads() {
+    switch (this.tipo) {
+      case 'Base': this.generateThreads(1, this.THREAD_SIZE); break;
+      case 'IMT': this.generateThreads(this.NUM_THREADS, this.THREAD_SIZE); break;
+      case 'BMT': this.generateThreads(this.NUM_THREADS, this.THREAD_SIZE); break;
+    }
+  }
+
+  generateThreads(n: number, length: number) {
     const threads: Thread[] = [];
     for (let i = 0; i < n; i++) {
         const threadName = `T${i+1}`;
@@ -137,8 +153,65 @@ export class EscalarComponent {
         const thread = new Thread(instructions, threadName);
         threads.push(thread);
     }
-    return threads;
+    this.threads = threads;
+
+    // Convertendo os dados para JSON
+    const json = JSON.stringify(threads, null, 2);
+
+    // Criando um Blob com os dados JSON
+    const blob = new Blob([json], { type: 'application/json' });
+
+    // Fazendo o download do arquivo JSON
+    saveAs(blob, 'threads.json');
   }
+  
+  loadThreads(event: Event): void {
+    const element = event.target as HTMLInputElement;
+    if (element.files && element.files.length > 0) {
+      const file = element.files[0];
+      console.log(file);
+      const reader = new FileReader();
+      reader.onerror = (error) => {
+        console.error('Erro ao ler o arquivo:', error);
+      };
+      reader.onload = (e) => {
+        if (e.target) {
+          const contents = e.target.result;
+          try {
+            console.log('Parsing data...');
+            const data = JSON.parse(contents as string);
+            console.log('Data parsed successfully:', data);
+      
+            console.log('Mapping data to threads...');
+            const newThreads = data.map((thread: any) => new Thread(
+              thread.instructions.map((instruction: any) => new Instruction(
+                instruction.threadName,
+                instruction.backgroundColor,
+                instruction.type,
+                instruction.name,
+                instruction.rd,
+                instruction.rs1,
+                instruction.rs2,
+                instruction.imm
+              )),
+              thread.name
+            ));
+            console.log('Data mapped to threads successfully:', newThreads);
+      
+            console.log('Clearing original threads array...');
+            this.threads.length = 0;
+      
+            console.log('Adding new threads to original array...');
+            this.threads.push(...newThreads);
+            console.log('Finished');
+          } catch (error) {
+            console.error('Error:', error);
+          }
+        }
+      };
+      reader.readAsText(file);
+    }
+  }  
 
   start(): void {
     switch (this.tipo) {
@@ -150,7 +223,8 @@ export class EscalarComponent {
   }
 
   async base(): Promise<void> {
-    const threads = this.generateThreads(1, this.THREAD_SIZE);
+
+    console.log(this.threads);
   
     this.pipelineHistory.forEach(element => {
       element.IF = Instruction.null();
@@ -160,9 +234,9 @@ export class EscalarComponent {
       element.WB = Instruction.null();
     });
   
-    for (let i = 0; i < threads[0].instructions.length; i++) {
+    for (let i = 0; i < this.threads[0].instructions.length; i++) {
 
-      if(i != threads[0].instructions.length-2) {
+      if(i != this.threads[0].instructions.length-2) {
         this.results.Ciclos++;
       }
 
@@ -179,7 +253,7 @@ export class EscalarComponent {
       )
       {
         // Bolha
-        this.pipelineHistory[this.actualLine].EX = Instruction.bubble(threads[0].name);
+        this.pipelineHistory[this.actualLine].EX = Instruction.bubble(this.threads[0].name);
         this.pipelineHistory[this.actualLine].ID = this.pipelineHistory[this.actualLine-1].ID;
         this.pipelineHistory[this.actualLine].IF = this.pipelineHistory[this.actualLine-1].IF;              
         this.results.Bolhas++;
@@ -187,7 +261,7 @@ export class EscalarComponent {
       } else {
         this.pipelineHistory[this.actualLine].EX = this.pipelineHistory[this.actualLine-1].ID;
         this.pipelineHistory[this.actualLine].ID = this.pipelineHistory[this.actualLine-1].IF;
-        this.pipelineHistory[this.actualLine].IF = threads[0].instructions[i];
+        this.pipelineHistory[this.actualLine].IF = this.threads[0].instructions[i];
       }
   
       if(this.pipelineHistory[this.actualLine].WB.name != '') {
@@ -203,8 +277,7 @@ export class EscalarComponent {
   }
 
   async IMT(): Promise<void> {
-    const threads = this.generateThreads(this.NUM_THREADS, this.THREAD_SIZE);
-  
+
     this.pipelineHistory.forEach(element => {
       element.IF = Instruction.null();
       element.ID = Instruction.null();
@@ -213,10 +286,10 @@ export class EscalarComponent {
       element.WB = Instruction.null();
     });
   
-    for (let i = 0; i < threads[0].instructions.length; i++) {   // Considerando que todas threads têm mesmo tamanho
+    for (let i = 0; i < this.threads[0].instructions.length; i++) {   // Considerando que todas threads têm mesmo tamanho
       for(let j = 0; j < this.NUM_THREADS; j++) {
 
-        if(i != threads[0].instructions.length-1) {
+        if(i != this.threads[0].instructions.length-1) {
           this.results.Ciclos++;
           this.dataSource2.data = this.getResultsArray();
         } else break;
@@ -225,7 +298,7 @@ export class EscalarComponent {
         this.pipelineHistory[this.actualLine].MEM = this.pipelineHistory[this.actualLine-1].EX;
         this.pipelineHistory[this.actualLine].EX = this.pipelineHistory[this.actualLine-1].ID;
         this.pipelineHistory[this.actualLine].ID = this.pipelineHistory[this.actualLine-1].IF;
-        this.pipelineHistory[this.actualLine].IF = threads[j].instructions[i];
+        this.pipelineHistory[this.actualLine].IF = this.threads[j].instructions[i];
 
         if(this.pipelineHistory[this.actualLine].WB.name != '') {
           this.results.Instrucoes++;
@@ -241,7 +314,6 @@ export class EscalarComponent {
   }
 
   async BMT(): Promise<void> {
-    const threads = this.generateThreads(this.NUM_THREADS, this.THREAD_SIZE);
   
     this.pipelineHistory.forEach(element => {
       element.IF = Instruction.null();
@@ -252,7 +324,7 @@ export class EscalarComponent {
     });
 
     let finishedSMT = false;
-    let threadSize = threads[0].instructions.length/this.BLOCK_SIZE;
+    let threadSize = this.threads[0].instructions.length/this.BLOCK_SIZE;
 
     console.log(threadSize)
 
@@ -299,7 +371,7 @@ export class EscalarComponent {
             } else {
               this.pipelineHistory[this.actualLine].EX = this.pipelineHistory[this.actualLine-1].ID;
               this.pipelineHistory[this.actualLine].ID = this.pipelineHistory[this.actualLine-1].IF;
-              this.pipelineHistory[this.actualLine].IF = threads[j].instructions[i*this.BLOCK_SIZE+k];
+              this.pipelineHistory[this.actualLine].IF = this.threads[j].instructions[i*this.BLOCK_SIZE+k];
             }
         
             if(this.pipelineHistory[this.actualLine].WB.name !== '') {

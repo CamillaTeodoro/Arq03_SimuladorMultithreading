@@ -7,7 +7,7 @@ import { IndexComponent } from './pages/index/index.component';
 import { HeaderComponent } from './components/header/header.component';
 import { MatToolbarModule } from "@angular/material/toolbar";
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
-import {MatSidenavModule} from '@angular/material/sidenav';
+import { MatSidenavModule } from '@angular/material/sidenav';
 import { SelectorComponent } from './components/selector/selector.component';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
@@ -16,7 +16,6 @@ import { SuperescalarComponent } from './components/superescalar/superescalar.co
 import { MatTableModule } from '@angular/material/table';
 import { MatStepperModule } from '@angular/material/stepper';
 import { MatDividerModule } from '@angular/material/divider';
-
 
 @NgModule({
   declarations: [
