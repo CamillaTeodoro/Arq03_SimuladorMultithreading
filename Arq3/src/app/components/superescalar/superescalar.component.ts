@@ -17,7 +17,7 @@ export class SuperescalarComponent {
 
   NUM_THREADS = 4;
   THREAD_SIZE = 20;
-  BLOCK_SIZE = 5;
+  BLOCK_SIZE = 3;
 
   THREADS_PER_CORE = 2;
 
@@ -110,27 +110,6 @@ export class SuperescalarComponent {
         const instruction = this.generateInstruction(threadName, backgroundColor, threadId);
         instructions.push(instruction);
     }
-
-    // Atualizar ultimas instrucoes como null
-    switch (this.tipo) {
-
-      case 'Base': break;
-      case 'IMT': break;
-
-      case 'BMT':
-        if(threadName == 'T0') {
-          for (let i = 0; i < 5; i++) {
-            const instruction = Instruction.null();
-            instructions.push(instruction);
-          }
-        }
-      break;
-
-      case 'SMT':
-      break;
-
-      default : console.log('error');
-    }
     return instructions;
   }
 
@@ -139,6 +118,7 @@ export class SuperescalarComponent {
       case 'Base': this.generateThreads(1, this.THREAD_SIZE); break;
       case 'IMT': this.generateThreads(this.NUM_THREADS, this.THREAD_SIZE); break;
       case 'BMT': this.generateThreads(this.NUM_THREADS, this.THREAD_SIZE); break;
+      case 'SMT': this.generateThreads(this.NUM_THREADS, this.THREAD_SIZE); break;
     }
   }
 
@@ -218,6 +198,7 @@ export class SuperescalarComponent {
       case 'Base': this.base(); break;
       case 'IMT':  this.IMT();  break;
       case 'BMT':  this.BMT();  break;
+      case 'SMT':  this.SMT();  break;
       default : console.log('error');
     }
   }
@@ -582,17 +563,17 @@ export class SuperescalarComponent {
                 instruction.rdRenamed = 'R' + atualRegisterRenamed;
                 atualRegisterRenamed = this.updateRenameRegister(atualRegisterRenamed);
               }
-    
+
               // Verificar dependencias verdadeiras
               if (writeRegisters[position].includes(instruction.rs1) || writeRegisters[position].includes(instruction.rs2)) {
     
                 // Renomear dependencia verdadeira
                 instruction.isBlocked = true;
               }
-    
+
               // Marcar registrador de escrita (possivel dependencia verdadeira)
               if(instruction.rd !== '') writeRegisters[position].push(instruction.rd);
-    
+
               if(instruction.rs1 !== '') readRegisters[position].push(instruction.rs1);
               if(instruction.rs2 !== '') readRegisters[position].push(instruction.rs2);
             }
@@ -631,7 +612,231 @@ export class SuperescalarComponent {
     }
   }
 
-  async BMT(): Promise<void> {}
+  async BMT(): Promise<void> {
+
+    let IDSize = 5;
+    let JANELASize = 20;
+    let EXSize = 3;  // Fixo 3 Unidades Funcionais
+    let WBSize = 4;
+
+    this.pipelineHistory.forEach(element => {
+      element.ID = Instruction.nullArray(IDSize);
+      element.JANELA = Instruction.nullArray(JANELASize);
+      element.EX = [
+        new FunctionalUnit('ULA', 2),
+        new FunctionalUnit('Desvio', 1),
+        new FunctionalUnit('Memória', 1)
+      ];
+      element.WB = Instruction.nullArray(WBSize);
+    });
+
+    let atualRegisterRenamed = 'a';
+    let readRegisters: string[][] = new Array(this.NUM_THREADS).fill(null).map(() => []);
+    let writeRegisters: string[][] = new Array(this.NUM_THREADS).fill(null).map(() => []);
+    let freeRegisteres: string[][] = new Array(this.NUM_THREADS).fill(null).map(() => []);
+
+    let instructionIndex = 0;
+
+    let finished = new Array(this.NUM_THREADS).fill(false);
+    let finishedCount = new Array(this.NUM_THREADS).fill(0);
+
+    let numberThreadOnExecute = 2;
+
+    while (!finished.every(val => val === true)) {
+
+      for(let pos = 0; pos < this.NUM_THREADS; pos++) {
+
+        if(!finished[pos]) {
+
+          for(let k = 0; k < this.BLOCK_SIZE; k++) {
+
+            // Finalizar instrucoes em WB
+            for(let j = 0; j < WBSize; j++) {
+
+              // Remover registrador de destino como possivel dependencia falsa
+              const instruction = this.pipelineHistory[this.actualLine-1].WB[j].clone();
+
+              if(instruction.name !== '') {
+                const position = instruction.threadId;
+                const index = writeRegisters[position].indexOf(instruction.rd);
+                if (index > -1) {
+                  freeRegisteres[position].push(instruction.rd);
+                  writeRegisters[position].splice(index, 1);
+                }
+                finishedCount[position]++;
+              }
+              this.pipelineHistory[this.actualLine].WB[j] = Instruction.null();
+            }
+
+            // Mover instrucoes de EX para WB
+            let nextWBIndex = 0;
+
+            for(let j = 0; j < EXSize; j++) {
+              let currentFunctionalUnit = this.pipelineHistory[this.actualLine-1].EX[j];
+
+              // Move todas as instruções da unidade funcional atual para WB
+              for(let index = 0; index < currentFunctionalUnit.ocupation; index++) {
+                this.pipelineHistory[this.actualLine].WB[nextWBIndex++] = currentFunctionalUnit.instructions[index];
+              }
+            }
+            this.dataSource2.data = this.getResultsArray();
+
+            // Mover da Janela para a EX
+            let alreadyCount = false;
+            let janelaIndex = 0;
+            
+            for(let j = 0; j < JANELASize; j++) {
+              let instruction = this.pipelineHistory[this.actualLine-1].JANELA[j];
+
+              // Verificar se pertence a thread atual
+              const threadAtual = `T${numberThreadOnExecute}`;
+              const position = instruction.threadId;
+
+              console.log(threadAtual)
+
+              if (instruction.threadName == threadAtual || instruction.threadName == '') {
+
+                // Desbloquear instrucoes que tinham dependencia verdadeira
+                if(instruction.isBlocked) {
+                  let index = freeRegisteres[position].indexOf(instruction.rs1);
+                  if (index > -1) {
+                    freeRegisteres[position].splice(index, 1);
+                    instruction.isBlocked = false;
+                  }
+                }
+                if(instruction.isBlocked) {
+                  console.log(freeRegisteres);
+                  const index = freeRegisteres[position].indexOf(instruction.rs2);
+                  if (index > -1) {
+                    freeRegisteres[position].splice(index, 1);
+                    instruction.isBlocked = false;
+                  }
+                }
+
+                // Somente tentar inserir se nao houver dependencia
+                if (!instruction.isBlocked) {
+
+                  // Inserir nas Unidades Funcionais
+                  let hasInsert = this.pipelineHistory[this.actualLine].updateExecution(instruction);
+                  
+                  // Se nao tinha espaco livre para aquela instrucao, repetir na janela de novo
+                  if (!hasInsert && instruction.name !== '') {
+                    this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] = instruction;
+                  }
+
+                  // Contabilizar ciclos de execucao
+                  if (!alreadyCount && instruction.name !== '') {
+                    this.results.CiclosExecucao++;
+                    alreadyCount = true;
+                  }
+
+                  // Contabilizar instrucoes executadas
+                  if (hasInsert && instruction.name !== '') {
+                    this.results.Instrucoes++;
+
+                    // Atualizar buffer de verificacao de dependencia falsa
+                    if(instruction.rs1 !== '') {
+                      const index = readRegisters[position].indexOf(instruction.rs1);
+                      if (index > -1) {
+                        if(readRegisters[position].length > 1) {
+                          readRegisters[position].splice(index, 1);
+                        } else {
+                          readRegisters[position][index] = '';
+                        }
+                      }
+                    }
+                    
+                    if(instruction.rs2 !== '') {
+                      const index = readRegisters[position].indexOf(instruction.rs2);
+                      if (index > -1) {
+                        if(readRegisters[position].length > 1) {
+                          readRegisters[position].splice(index, 1);
+                        } else {
+                          readRegisters[position][index] = '';
+                        }
+                      }
+                    }
+                  }
+                  this.dataSource2.data = this.getResultsArray();
+                } else {
+                  this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] = instruction;
+                }
+
+              } else {
+                this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] = instruction;
+              }
+            }
+
+            let IDIndex = 0;
+
+            // Mover do ID para a janela
+            // Enquanto tiver espaco livre na janela
+            while(janelaIndex < JANELASize && IDIndex < IDSize) {
+              let instruction = this.pipelineHistory[this.actualLine-1].ID[IDIndex++];
+
+              if (instruction.name !== '') {
+                this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] = instruction;
+                
+                // Verificar dependencias falsas
+                const position = instruction.threadId;
+                //console.log(position)
+                console.log(`readRegisters.length = ${readRegisters.length}`)
+                console.log(readRegisters[position])
+                if (readRegisters[position].includes(instruction.rd)) {
+      
+                  // Renomear dependencia falsa
+                  instruction.rdRenamed = 'R' + atualRegisterRenamed;
+                  atualRegisterRenamed = this.updateRenameRegister(atualRegisterRenamed);
+                }
+
+                // Verificar dependencias verdadeiras
+                if (writeRegisters[position].includes(instruction.rs1) || writeRegisters[position].includes(instruction.rs2)) {
+      
+                  // Renomear dependencia verdadeira
+                  instruction.isBlocked = true;
+                }
+
+                // Marcar registrador de escrita (possivel dependencia verdadeira)
+                if(instruction.rd !== '') writeRegisters[position].push(instruction.rd);
+
+                if(instruction.rs1 !== '') readRegisters[position].push(instruction.rs1);
+                if(instruction.rs2 !== '') readRegisters[position].push(instruction.rs2);
+              }
+            }
+
+            // Se sobrou instrucao copiar e manter em ID
+            let newIDIndex = 0;
+
+            while(IDIndex < IDSize) {
+              let instruction = this.pipelineHistory[this.actualLine-1].ID[IDIndex++];
+
+              if (instruction.name !== '') {
+                this.pipelineHistory[this.actualLine].ID[newIDIndex++] = instruction;
+              }
+            }
+
+            // Preencher estagio ID
+            while(newIDIndex < IDSize && instructionIndex < this.threads[pos].instructions.length) {
+              let instruction = this.threads[pos].instructions[instructionIndex++];
+
+              this.pipelineHistory[this.actualLine].ID[newIDIndex++] = instruction;
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            finished[pos] = instructionIndex >= this.threads[pos].instructions.length &&
+                            finishedCount[pos] === this.threads[pos].instructions.length
+
+            this.actualLine++;
+
+            this.results.IPC = this.results.CiclosExecucao != 0 ? this.results.Instrucoes/this.results.CiclosExecucao : 0;
+            this.dataSource2.data = this.getResultsArray();
+          }
+          numberThreadOnExecute = ((numberThreadOnExecute+1)%this.NUM_THREADS);
+        }
+      }
+    }
+  }
 
   async SMT(): Promise<void> {}
 }

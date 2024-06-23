@@ -326,8 +326,6 @@ export class EscalarComponent {
     let finishedSMT = false;
     let threadSize = this.threads[0].instructions.length/this.BLOCK_SIZE;
 
-    console.log(threadSize)
-
     for (let i = 0; i < threadSize; i++) {   // Considerando que todas threads têm mesmo tamanho
       for(let j = 0; j < this.NUM_THREADS; j++) {
 
