@@ -67,11 +67,17 @@ export class SuperescalarComponent {
       return 'R' + Math.floor(Math.random() * 32);
   }
 
+  updateRenameRegister(atualRegisterRenamed: string) {
+    const code = atualRegisterRenamed.charCodeAt(0);
+    const newCode = code === 122 ? 97 : code + 1;
+    return String.fromCharCode(newCode);
+  }
+
   getRandomImmediate(): number {
     return Math.floor(Math.random() * 1000);
   }
 
-  generateInstruction(threadName: string, backgroundColor: string): Instruction {
+  generateInstruction(threadName: string, backgroundColor: string, threadId: number): Instruction {
     const name = this.getRandomInstructionName();
     const rd = this.getRandomRegister();
     const rs1 = this.getRandomRegister();
@@ -79,29 +85,29 @@ export class SuperescalarComponent {
     const imm = this.getRandomImmediate();
 
     if (['ADD', 'SUB', 'AND', 'OR', 'XOR', 'SLL', 'SRL', 'SRA', 'SLT', 'SLTU', 'MUL', 'MULH', 'MULHSU', 'MULHU', 'DIV', 'DIVU', 'REM', 'REMU'].includes(name)) {
-        return new Instruction(threadName, backgroundColor,'R', name, rd, rs1, rs2, 0);
+        return new Instruction(threadName, threadId, backgroundColor,'R', name, rd, rs1, rs2, 0);
 
     } else if (['LB', 'LH', 'LW', 'LBU', 'LHU'].includes(name)) {
-        return new Instruction(threadName, backgroundColor, 'I', name, rd, rs1, '', imm);
+        return new Instruction(threadName, threadId, backgroundColor, 'I', name, rd, rs1, '', imm);
 
     } else if (['SB', 'SH', 'SW'].includes(name)) {
-        return new Instruction(threadName, backgroundColor, 'S', name, '', rs1, rs2, imm);
+        return new Instruction(threadName, threadId, backgroundColor, 'S', name, '', rs1, rs2, imm);
 
     } else if (['BEQ', 'BNE', 'BLT', 'BGE', 'BLTU', 'BGEU'].includes(name)) {
-        return new Instruction(threadName, backgroundColor, 'B', name, '', rs1, rs2, imm);
+        return new Instruction(threadName, threadId, backgroundColor, 'B', name, '', rs1, rs2, imm);
 
     } else if (name === 'JAL') {
-        return new Instruction(threadName, backgroundColor, 'J', name, rd, '', '', imm);
+        return new Instruction(threadName, threadId, backgroundColor, 'J', name, rd, '', '', imm);
 
     } else {
-        return new Instruction(threadName, backgroundColor, 'I', name, rd, rs1, '', imm);
+        return new Instruction(threadName, threadId, backgroundColor, 'I', name, rd, rs1, '', imm);
     }
   }
 
-  generateInstructions(n: number, threadName: string, backgroundColor: string): Instruction[] {
+  generateInstructions(n: number, threadName: string, threadId: number, backgroundColor: string): Instruction[] {
     let instructions: Instruction[] = [];
     for (let i = 0; i < n; i++) {
-        const instruction = this.generateInstruction(threadName, backgroundColor);
+        const instruction = this.generateInstruction(threadName, backgroundColor, threadId);
         instructions.push(instruction);
     }
 
@@ -109,17 +115,10 @@ export class SuperescalarComponent {
     switch (this.tipo) {
 
       case 'Base': break;
-
-      case 'IMT':
-        let i = threadName == 'T1' ? 2 : 1
-        for(let j = 0; j < i; j++) {
-          const instruction = Instruction.null();
-          instructions.push(instruction);
-        }
-      break;
+      case 'IMT': break;
 
       case 'BMT':
-        if(threadName == 'T1') {
+        if(threadName == 'T0') {
           for (let i = 0; i < 5; i++) {
             const instruction = Instruction.null();
             instructions.push(instruction);
@@ -164,9 +163,10 @@ export class SuperescalarComponent {
   generateThreads(n: number, length: number) {
     const threads: Thread[] = [];
     for (let i = 0; i < n; i++) {
-        const threadName = `T${i+1}`;
-        const instructions = this.generateInstructions(length, threadName, this.backgroundColors[i]);
-        const thread = new Thread(instructions, threadName);
+        const threadName = `T${i}`;
+        const threadId = i;
+        const instructions = this.generateInstructions(length, threadName, threadId, this.backgroundColors[i]);
+        const thread = new Thread(instructions, threadName, i);
         threads.push(thread);
     }
     this.threads = threads;
@@ -202,6 +202,7 @@ export class SuperescalarComponent {
             const newThreads = data.map((thread: any) => new Thread(
               thread.instructions.map((instruction: any) => new Instruction(
                 instruction.threadName,
+                instruction.threadId,
                 instruction.backgroundColor,
                 instruction.type,
                 instruction.name,
@@ -210,7 +211,8 @@ export class SuperescalarComponent {
                 instruction.rs2,
                 instruction.imm
               )),
-              thread.name
+              thread.name,
+              thread.id
             ));
             console.log('Data mapped to threads successfully:', newThreads);
       
@@ -240,8 +242,8 @@ export class SuperescalarComponent {
 
   async base(): Promise<void> {
 
-    let IDSize = 2;
-    let JANELASize = 10;
+    let IDSize = 5;
+    let JANELASize = 20;
     let EXSize = 3;  // Fixo 3 Unidades Funcionais
     let WBSize = 4;
 
@@ -256,12 +258,28 @@ export class SuperescalarComponent {
       element.WB = Instruction.nullArray(WBSize);
     });
 
+    let atualRegisterRenamed = 'a';
+    let readRegisters: string[] = [];
+    let writeRegisters: string[] = [];
+    let freeRegisteres: string[] = [];
+
     let instructionIndex = 0;
     let finished = false;
     while (!finished) {
 
       // Finalizar instrucoes em WB
       for(let j = 0; j < WBSize; j++) {
+
+        // Remover registrador de destino como possivel dependencia falsa
+        const instruction = this.pipelineHistory[this.actualLine-1].WB[j].clone();
+
+        if(instruction.name !== '') {
+          const index = writeRegisters.indexOf(instruction.rd);
+          if (index > -1) {
+            freeRegisteres.push(instruction.rd);
+            writeRegisters.splice(index, 1);
+          }
+        }
         this.pipelineHistory[this.actualLine].WB[j] = Instruction.null();
       }
 
@@ -283,28 +301,65 @@ export class SuperescalarComponent {
       let janelaIndex = 0;
       
       for(let j = 0; j < JANELASize; j++) {
-        let instruction = this.pipelineHistory[this.actualLine-1].JANELA[j];
+        let instruction = this.pipelineHistory[this.actualLine-1].JANELA[j].clone();
+      
+        // Desbloquear instrucoes que tinham dependencia verdadeira
+        if(instruction.isBlocked) {
+          let index = freeRegisteres.indexOf(instruction.rs1);
+          if (index > -1) {
+            freeRegisteres.splice(index, 1);
+            instruction.isBlocked = false;
+          }
+        }
+        if(instruction.isBlocked) {
+          console.log(freeRegisteres);
+          const index = freeRegisteres.indexOf(instruction.rs2);
+          if (index > -1) {
+            freeRegisteres.splice(index, 1);
+            instruction.isBlocked = false;
+          }
+        }
 
-        // Inserir nas Unidades Funcionais
-        let hasInsert = this.pipelineHistory[this.actualLine].updateExecution(instruction);
-        
-        // Se nao tinha espaco livre para aquela instrucao, repetir na janela de novo
-        if (!hasInsert && instruction.name !== '') {
+        // Somente tentar inserir se nao houver dependencia
+        if (!instruction.isBlocked) {
+
+          // Inserir nas Unidades Funcionais
+          let hasInsert = this.pipelineHistory[this.actualLine].updateExecution(instruction);
+          
+          // Se nao tinha espaco livre para aquela instrucao, repetir na janela de novo
+          if (!hasInsert && instruction.name !== '') {
+            this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] = instruction;
+          }
+
+          // Contabilizar ciclos de execucao
+          if (!alreadyCount && instruction.name !== '') {
+            this.results.CiclosExecucao++;
+            alreadyCount = true;
+          }
+
+          // Contabilizar instrucoes executadas
+          if (hasInsert && instruction.name !== '') {
+            this.results.Instrucoes++;
+
+            // Atualizar buffer de verificacao de dependencia falsa
+            if(instruction.rs1 !== '') {
+              const index = readRegisters.indexOf(instruction.rs1);
+              if (index > -1) {
+                readRegisters.splice(index, 1);
+              }
+            }
+
+            if(instruction.rs2 !== '') {
+              const index = readRegisters.indexOf(instruction.rs2);
+              if (index > -1) {
+                readRegisters.splice(index, 1);
+              }
+            }
+          }
+          this.dataSource2.data = this.getResultsArray();
+        } else {
           this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] = instruction;
         }
-
-        // Contabilizar ciclos de execucao
-        if (!alreadyCount && instruction.name !== '') {
-          this.results.CiclosExecucao++;
-          alreadyCount = true;
-        }
-
-        // Contabilizar instrucoes executadas
-        if (hasInsert && instruction.name !== '') {
-          this.results.Instrucoes++;
-        }
-
-        this.dataSource2.data = this.getResultsArray();
       }
 
       let IDIndex = 0;
@@ -312,10 +367,32 @@ export class SuperescalarComponent {
       // Mover do ID para a janela
       // Enquanto tiver espaco livre na janela
       while(janelaIndex < JANELASize && IDIndex < IDSize) {
-        let instruction = this.pipelineHistory[this.actualLine-1].ID[IDIndex++];
+        let instruction = this.pipelineHistory[this.actualLine-1].ID[IDIndex++].clone();
 
         if (instruction.name !== '') {
           this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] = instruction;
+          
+          // Verificar dependencias falsas
+          if (readRegisters.includes(instruction.rd)) {
+
+            // Renomear dependencia falsa
+            instruction.rdRenamed = 'R' + atualRegisterRenamed;
+            atualRegisterRenamed = this.updateRenameRegister(atualRegisterRenamed);
+          }
+
+          // Verificar dependencias verdadeiras
+          if (writeRegisters.includes(instruction.rs1) || writeRegisters.includes(instruction.rs2)) {
+
+            // Renomear dependencia verdadeira
+            instruction.isBlocked = true;
+            console.log('truee')
+          }
+
+          // Marcar registrador de escrita (possivel dependencia verdadeira)
+          if(instruction.rd !== '') writeRegisters.push(instruction.rd);
+
+          if(instruction.rs1 !== '') readRegisters.push(instruction.rs1);
+          if(instruction.rs2 !== '') readRegisters.push(instruction.rs2);
         }
       }
 
@@ -323,7 +400,7 @@ export class SuperescalarComponent {
       let newIDIndex = 0;
 
       while(IDIndex < IDSize) {
-        let instruction = this.pipelineHistory[this.actualLine-1].ID[IDIndex++];
+        let instruction = this.pipelineHistory[this.actualLine-1].ID[IDIndex++].clone();
 
         if (instruction.name !== '') {
           this.pipelineHistory[this.actualLine].ID[newIDIndex++] = instruction;
@@ -332,7 +409,7 @@ export class SuperescalarComponent {
 
       // Preencher estagio ID
       while(newIDIndex < IDSize && instructionIndex < this.threads[0].instructions.length) {
-        let instruction = this.threads[0].instructions[instructionIndex++];
+        let instruction = this.threads[0].instructions[instructionIndex++].clone();
 
         this.pipelineHistory[this.actualLine].ID[newIDIndex++] = instruction;
       }
@@ -351,10 +428,10 @@ export class SuperescalarComponent {
 
   async IMT(): Promise<void> {
 
-  let IDSize = 2;
-  let JANELASize = 10;
-  let EXSize = 3;  // Fixo 3 Unidades Funcionais
-  let WBSize = 4;
+    let IDSize = 5;
+    let JANELASize = 20;
+    let EXSize = 3;  // Fixo 3 Unidades Funcionais
+    let WBSize = 4;
 
   this.pipelineHistory.forEach(element => {
     element.ID = Instruction.nullArray(IDSize);
@@ -367,10 +444,17 @@ export class SuperescalarComponent {
     element.WB = Instruction.nullArray(WBSize);
   });
 
+  let atualRegisterRenamed = 'a';
+  let readRegisters: string[][] = new Array(this.NUM_THREADS).fill(null).map(() => []);
+  let writeRegisters: string[][] = new Array(this.NUM_THREADS).fill(null).map(() => []);
+  let freeRegisteres: string[][] = new Array(this.NUM_THREADS).fill(null).map(() => []);
+
   let instructionIndex = 0;
+
   let finished = new Array(this.NUM_THREADS).fill(false);
   let finishedCount = new Array(this.NUM_THREADS).fill(0);
-  let numberThreadOnExecute = 3;
+
+  let numberThreadOnExecute = 2;
 
   while (!finished.every(val => val === true)) {
 
@@ -380,6 +464,18 @@ export class SuperescalarComponent {
 
         // Finalizar instrucoes em WB
         for(let j = 0; j < WBSize; j++) {
+
+          // Remover registrador de destino como possivel dependencia falsa
+          const instruction = this.pipelineHistory[this.actualLine-1].WB[j].clone();
+
+          if(instruction.name !== '') {
+            const position = instruction.threadId;
+            const index = writeRegisters[position].indexOf(instruction.rd);
+            if (index > -1) {
+              freeRegisteres[position].push(instruction.rd);
+              writeRegisters[position].splice(index, 1);
+            }
+          }
           this.pipelineHistory[this.actualLine].WB[j] = Instruction.null();
         }
 
@@ -405,29 +501,70 @@ export class SuperescalarComponent {
 
           // Verificar se pertence a thread atual
           const threadAtual = `T${numberThreadOnExecute}`;
+          const position = instruction.threadId;
+
+          console.log(threadAtual)
 
           if (instruction.threadName == threadAtual || instruction.threadName == '') {
 
-            // Inserir nas Unidades Funcionais
-            let hasInsert = this.pipelineHistory[this.actualLine].updateExecution(instruction);
-            
-            // Se nao tinha espaco livre para aquela instrucao, repetir na janela de novo
-            if (!hasInsert && instruction.name !== '') {
+            // Desbloquear instrucoes que tinham dependencia verdadeira
+            if(instruction.isBlocked) {
+              let index = freeRegisteres[position].indexOf(instruction.rs1);
+              if (index > -1) {
+                freeRegisteres[position].splice(index, 1);
+                instruction.isBlocked = false;
+              }
+            }
+            if(instruction.isBlocked) {
+              console.log(freeRegisteres);
+              const index = freeRegisteres[position].indexOf(instruction.rs2);
+              if (index > -1) {
+                freeRegisteres[position].splice(index, 1);
+                instruction.isBlocked = false;
+              }
+            }
+
+            // Somente tentar inserir se nao houver dependencia
+            if (!instruction.isBlocked) {
+
+              // Inserir nas Unidades Funcionais
+              let hasInsert = this.pipelineHistory[this.actualLine].updateExecution(instruction);
+              
+              // Se nao tinha espaco livre para aquela instrucao, repetir na janela de novo
+              if (!hasInsert && instruction.name !== '') {
+                this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] = instruction;
+              }
+
+              // Contabilizar ciclos de execucao
+              if (!alreadyCount && instruction.name !== '') {
+                this.results.CiclosExecucao++;
+                alreadyCount = true;
+              }
+
+              // Contabilizar instrucoes executadas
+              if (hasInsert && instruction.name !== '') {
+                this.results.Instrucoes++;
+
+                // Atualizar buffer de verificacao de dependencia falsa
+                if(instruction.rs1 !== '') {
+                  const index = readRegisters[position].indexOf(instruction.rs1);
+                  if (index > -1) {
+                    readRegisters.splice(index, 1);
+                  }
+                }
+
+                if(instruction.rs2 !== '') {
+                  const index = readRegisters[position].indexOf(instruction.rs2);
+                  if (index > -1) {
+                    readRegisters.splice(index, 1);
+                  }
+                }
+              }
+              this.dataSource2.data = this.getResultsArray();
+            } else {
               this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] = instruction;
             }
 
-            // Contabilizar ciclos de execucao
-            if (!alreadyCount && instruction.name !== '') {
-              this.results.CiclosExecucao++;
-              alreadyCount = true;
-            }
-
-            // Contabilizar instrucoes executadas
-            if (hasInsert && instruction.name !== '') {
-              this.results.Instrucoes++;
-            }
-
-            this.dataSource2.data = this.getResultsArray();
           } else {
             this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] = instruction;
           }
@@ -442,6 +579,29 @@ export class SuperescalarComponent {
 
           if (instruction.name !== '') {
             this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] = instruction;
+            
+            // Verificar dependencias falsas
+            const position = instruction.threadId;
+
+            if (readRegisters[position].includes(instruction.rd)) {
+  
+              // Renomear dependencia falsa
+              instruction.rdRenamed = 'R' + atualRegisterRenamed;
+              atualRegisterRenamed = this.updateRenameRegister(atualRegisterRenamed);
+            }
+  
+            // Verificar dependencias verdadeiras
+            if (writeRegisters[position].includes(instruction.rs1) || writeRegisters[position].includes(instruction.rs2)) {
+  
+              // Renomear dependencia verdadeira
+              instruction.isBlocked = true;
+            }
+  
+            // Marcar registrador de escrita (possivel dependencia verdadeira)
+            if(instruction.rd !== '') writeRegisters[position].push(instruction.rd);
+  
+            if(instruction.rs1 !== '') readRegisters[position].push(instruction.rs1);
+            if(instruction.rs2 !== '') readRegisters[position].push(instruction.rs2);
           }
         }
 
@@ -473,7 +633,7 @@ export class SuperescalarComponent {
         this.results.IPC = this.results.CiclosExecucao != 0 ? this.results.Instrucoes/this.results.CiclosExecucao : 0;
         this.dataSource2.data = this.getResultsArray();
       }
-      numberThreadOnExecute = (numberThreadOnExecute%this.NUM_THREADS)+1;
+      numberThreadOnExecute = ((numberThreadOnExecute+1)%this.NUM_THREADS);
     }
   }
 }
@@ -562,39 +722,59 @@ export class SuperescalarComponent {
 
 export class Instruction {
   threadName: string;
+  threadId: number;
   backgroundColor: string;
   type: string;
   name: string;
   rd: string;
+  rdRenamed: string;
   rs1: string;
   rs2: string;
   imm: number;
+  isBlocked: boolean;
 
-  constructor(threadName: string, backgroundColor: string, type: string, name: string, rd: string, rs1: string, rs2: string, imm: number) {
+  constructor(threadName: string, threadId: number, backgroundColor: string, type: string, name: string, rd: string, rs1: string, rs2: string, imm: number) {
       this.threadName = threadName;
+      this.threadId = threadId;
       this.backgroundColor = backgroundColor;
       this.type = type;
       this.name = name;
       this.rd = rd;
+      this.rdRenamed = '';
       this.rs1 = rs1;
       this.rs2 = rs2;
       this.imm = imm;
+      this.isBlocked = false;
+  }
+
+  clone(): Instruction {
+    return new Instruction(
+      this.threadName,
+      this.threadId,
+      this.backgroundColor,
+      this.type,
+      this.name,
+      this.rd,
+      this.rs1,
+      this.rs2,
+      this.imm
+    );
   }
 
   toString(): string {  
       switch (this.type) {
           case 'R':
-              return `${this.threadName}: ${this.name} ${this.rd}, ${this.rs1}, ${this.rs2}`;
+            return `${this.threadName}: ${this.name} ${this.rdRenamed !== '' ? this.rdRenamed : this.rd}, ${this.rs1}, ${this.rs2}`;
           case 'I':
-              return `${this.threadName}: ${this.name} ${this.rd}, ${this.imm}(${this.rs1})`;
+              return `${this.threadName}: ${this.name} ${this.rdRenamed !== '' ? this.rdRenamed : this.rd}, ${this.imm}(${this.rs1})`;
           case 'S':
               return `${this.threadName}: ${this.name} ${this.rs1}, ${this.rs2}(${this.imm})`;
           case 'B':
               return `${this.threadName}: ${this.name} ${this.rs1}, ${this.rs2}, ${this.imm}`;
           case 'J':
-              return `${this.threadName}: ${this.name} ${this.rd}, ${this.imm}`;
+              return `${this.threadName}: ${this.name} ${this.rdRenamed !== '' ? this.rdRenamed : this.rd}, ${this.imm}`;
           case 'F':
-              return `${this.threadName}: ${this.name} ${this.rd}, ${this.rs1}, ${this.rs2}`;
+              return `${this.threadName}: ${this.name} ${this.rdRenamed !== '' ? this.rdRenamed : this.rd}, ${this.rs1}, ${this.rs2}`;
           case 'Bubble':
               return `${this.threadName}: ${this.type}`;
           default:
@@ -603,25 +783,27 @@ export class Instruction {
   }
 
   static null(): Instruction {
-    return new Instruction('', 'transparent', '', '', '', '', '', -1);
+    return new Instruction('', -1, 'transparent', '', '', '', '', '', -1);
   }
 
   static nullArray(n: number): Instruction[] {
-    return Array.from({length: n}, () => new Instruction('', 'transparent', '', '', '', '', '', -1));
+    return Array.from({length: n}, () => new Instruction('', -1, 'transparent', '', '', '', '', '', -1));
   }
 
-  static bubble(threadName: string): Instruction {
-    return new Instruction(threadName, 'gray', 'Bubble', '', '', '', '', -1);
+  static bubble(threadName: string, threadId: number): Instruction {
+    return new Instruction(threadName, threadId, 'gray', 'Bubble', '', '', '', '', -1);
   }
 }
 
 export class Thread {
   instructions: Instruction[];
   name: string;
+  id: number;
 
-  constructor(instructions: Instruction[], name: string) {
-      this.instructions = instructions;
-      this.name = name;
+  constructor(instructions: Instruction[], name: string, id: number) {
+    this.instructions = instructions;
+    this.name = name;
+    this.id = id;
   }
 
   toString(): string {
