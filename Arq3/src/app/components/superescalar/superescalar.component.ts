@@ -739,8 +739,6 @@ export class SuperescalarComponent {
                 if (!this.pipelineHistory[this.actualLine].JANELA.includes(instruction)) this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] = instruction;
               }
             }
-            numberThreadOnExecute = (numberThreadOnExecute + 1) % this.NUM_THREADS;
-            updatedNumberThread = true;
           }
 
           let IDIndex = 0;
@@ -861,8 +859,7 @@ export class SuperescalarComponent {
       .fill(null)
       .map(() => []);
 
-    let instructionIndex = 0;
-
+    let instructionIndex = new Array(this.NUM_THREADS).fill(0);
     let finished = new Array(this.NUM_THREADS).fill(false);
     let finishedCount = new Array(this.NUM_THREADS).fill(0);
 
@@ -927,8 +924,8 @@ export class SuperescalarComponent {
             // Se EX ficar vazio, passar para proxima thread
             // console.log(!addedEX && started && !stop && countLoop < 8);
             // STOP:
-            // while(!addedEX && started && !stop && countLoop < 8) {
-            //   countLoop++;
+            while(!addedEX && started && !stop && countLoop < 8) {
+              countLoop++;
 
               for (let j = 0; j < JANELASize; j++) {
                 let instruction = this.pipelineHistory[this.actualLine - 1].JANELA[j];
@@ -1024,9 +1021,9 @@ export class SuperescalarComponent {
                 } else {
                   //if (!this.pipelineHistory[this.actualLine].JANELA.includes(instruction)) this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] = instruction;
                 }
-              // }
-              // numberThreadOnExecute = (numberThreadOnExecute + 1) % this.NUM_THREADS;
-              // updatedNumberThread = true;
+              }
+              numberThreadOnExecute = (numberThreadOnExecute + 1) % this.NUM_THREADS;
+              updatedNumberThread = true;
             }
   
             let IDIndex = 0;
@@ -1090,10 +1087,10 @@ export class SuperescalarComponent {
             // Preencher estagio ID
             while (
               newIDIndex < IDSize &&
-              instructionIndex < this.threads[pos].instructions.length
+              instructionIndex[pos] < this.threads[pos].instructions.length
             ) {
               let instruction =
-                this.threads[pos].instructions[instructionIndex++];
+                this.threads[pos].instructions[instructionIndex[pos]++];
 
               this.pipelineHistory[this.actualLine].ID[newIDIndex++] =
                 instruction;
@@ -1102,8 +1099,8 @@ export class SuperescalarComponent {
             await new Promise((resolve) => setTimeout(resolve, 2000));
 
             finished[pos] =
-              instructionIndex >= this.threads[pos].instructions.length &&
-              finishedCount[pos] === this.threads[pos].instructions.length;
+            instructionIndex[pos] >= this.threads[pos].instructions.length &&
+            finishedCount[pos] === this.threads[pos].instructions.length;
 
             this.actualLine++;
 
@@ -1113,7 +1110,6 @@ export class SuperescalarComponent {
                 : 0;
             this.dataSource2.data = this.getResultsArray();
           }
-
           numberThreadOnExecute = (numberThreadOnExecute + 1) % this.NUM_THREADS;
         }
       }
