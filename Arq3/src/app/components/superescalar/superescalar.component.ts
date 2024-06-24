@@ -955,6 +955,7 @@ export class SuperescalarComponent {
                       instruction.isBlocked = false;
                     }
                   }
+
                   if (instruction.isBlocked) {
                     console.log(freeRegisteres);
                     const index = freeRegisteres[position].indexOf(instruction.rs2);
@@ -974,7 +975,7 @@ export class SuperescalarComponent {
 
                     // Se nao tinha espaco livre para aquela instrucao, repetir na janela de novo
                     if (!hasInsert && instruction.name !== '') {
-                      this.pipelineHistory[this.actualLine].JANELA[ janelaIndex++] = instruction;
+                      this.pipelineHistory[this.actualLine].JANELA[ janelaIndex++] = instruction.clone();;
                     }
 
                     // Contabilizar ciclos de execucao
@@ -1025,11 +1026,28 @@ export class SuperescalarComponent {
                     }
                     this.dataSource2.data = this.getResultsArray();
                   } else {
-                    this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] = instruction;
+                    this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] = instruction.clone();;
                   }
                 } else {
+                  // Desbloquear instrucoes que tinham dependencia verdadeira
+                  if (instruction.isBlocked) {
+                    let index = freeRegisteres[position].indexOf(instruction.rs1);
+                    if (index > -1) {
+                      freeRegisteres[position].splice(index, 1);
+                      instruction.isBlocked = false;
+                    }
+                  }
+
+                  if (instruction.isBlocked) {
+                    console.log(freeRegisteres);
+                    const index = freeRegisteres[position].indexOf(instruction.rs2);
+                    if (index > -1) {
+                      freeRegisteres[position].splice(index, 1);
+                      instruction.isBlocked = false;
+                    }
+                  }
                   // if (!this.pipelineHistory[this.actualLine].JANELA.some(i => i.id === instruction.id)) {
-                  //   this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] = instruction;
+                  //   this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] = instruction.clone();
                   // }
                 }
               }
@@ -1128,21 +1146,21 @@ export class SuperescalarComponent {
   }
 
   async SMT(): Promise<void> {
-    let IDSize = 5;
-    let JANELASize = 20;
-    let EXSize = 3;
-    let WBSize = 4;
+    const IDSize = 5;
+    const JANELASize = 20;
+    const EXSize = 3;
+    const WBSize = 4;
 
     // Inicialização dos arrays do pipeline
     this.pipelineHistory.forEach((element) => {
-      element.ID = Instruction.nullArray(IDSize);
-      element.JANELA = Instruction.nullArray(JANELASize);
+      element.ID = Array(IDSize).fill(Instruction.null());
+      element.JANELA = Array(JANELASize).fill(Instruction.null());
       element.EX = [
         new FunctionalUnit('ULA', 2),
         new FunctionalUnit('Desvio', 1),
         new FunctionalUnit('Memória', 1),
       ];
-      element.WB = Instruction.nullArray(WBSize);
+      element.WB = Array(WBSize).fill(Instruction.null());
     });
 
     let atualRegisterRenamed = 'a';
@@ -1152,7 +1170,7 @@ export class SuperescalarComponent {
     let writeRegisters: string[][] = new Array(this.NUM_THREADS)
       .fill(null)
       .map(() => []);
-    let freeRegisteres: string[][] = new Array(this.NUM_THREADS)
+    let freeRegisters: string[][] = new Array(this.NUM_THREADS)
       .fill(null)
       .map(() => []);
 
@@ -1171,7 +1189,7 @@ export class SuperescalarComponent {
               const position = instruction.threadId;
               const index = writeRegisters[position].indexOf(instruction.rd);
               if (index > -1) {
-                freeRegisteres[position].push(instruction.rd);
+                freeRegisters[position].push(instruction.rd);
                 writeRegisters[position].splice(index, 1);
               }
               finishedCount[position]++;
@@ -1182,7 +1200,7 @@ export class SuperescalarComponent {
           // EX Stage
           let nextWBIndex = 0;
           for (let j = 0; j < EXSize; j++) {
-            let currentFunctionalUnit =
+            const currentFunctionalUnit =
               this.pipelineHistory[this.actualLine - 1].EX[j];
             for (
               let index = 0;
@@ -1194,8 +1212,6 @@ export class SuperescalarComponent {
             }
           }
 
-          this.dataSource2.data = this.getResultsArray();
-
           // JANELA Stage
           let alreadyCount = false;
           let janelaIndex = 0;
@@ -1205,70 +1221,61 @@ export class SuperescalarComponent {
             const threadAtual = `T${pos}`;
             const position = instruction.threadId;
 
-              if (instruction.isBlocked) {
-                let index = freeRegisteres[position].indexOf(instruction.rs1);
-                if (index > -1) {
-                  freeRegisteres[position].splice(index, 1);
-                  instruction.isBlocked = false;
-                }
+            if (instruction.isBlocked) {
+              let index = freeRegisters[position].indexOf(instruction.rs1);
+              if (index > -1) {
+                freeRegisters[position].splice(index, 1);
+                instruction.isBlocked = false;
               }
-              if (instruction.isBlocked) {
-                const index = freeRegisteres[position].indexOf(instruction.rs2);
-                if (index > -1) {
-                  freeRegisteres[position].splice(index, 1);
-                  instruction.isBlocked = false;
-                }
+            }
+            if (instruction.isBlocked) {
+              const index = freeRegisters[position].indexOf(instruction.rs2);
+              if (index > -1) {
+                freeRegisters[position].splice(index, 1);
+                instruction.isBlocked = false;
               }
+            }
 
-              if (!instruction.isBlocked) {
-                let hasInsert =
-                  this.pipelineHistory[this.actualLine].updateExecution(
-                    instruction
-                  );
-                if (!hasInsert && instruction.name !== '') {
-                  this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] =
-                    instruction;
-                }
-
-                if (!alreadyCount && instruction.name !== '') {
-                  this.results.CiclosExecucao++;
-                  alreadyCount = true;
-                }
-
-                if (hasInsert && instruction.name !== '') {
-                  this.results.Instrucoes++;
-                  if (instruction.rs1 !== '') {
-                    const index = readRegisters[position].indexOf(
-                      instruction.rs1
-                    );
-                    if (index > -1) {
-                      if (readRegisters[position].length > 1) {
-                        readRegisters[position].splice(index, 1);
-                      } else {
-                        readRegisters[position][index] = '';
-                      }
-                    }
-                  }
-
-                  if (instruction.rs2 !== '') {
-                    const index = readRegisters[position].indexOf(
-                      instruction.rs2
-                    );
-                    if (index > -1) {
-                      if (readRegisters[position].length > 1) {
-                        readRegisters[position].splice(index, 1);
-                      } else {
-                        readRegisters[position][index] = '';
-                      }
-                    }
-                  }
-                }
-                this.dataSource2.data = this.getResultsArray();
-              } else {
+            if (!instruction.isBlocked) {
+              let hasInsert =
+                this.pipelineHistory[this.actualLine].updateExecution(
+                  instruction
+                );
+              if (!hasInsert && instruction.name !== '') {
                 this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] =
                   instruction;
               }
 
+              if (!alreadyCount && instruction.name !== '') {
+                this.results.CiclosExecucao++;
+                alreadyCount = true;
+              }
+
+              if (hasInsert && instruction.name !== '') {
+                this.results.Instrucoes++;
+                if (instruction.rs1 !== '') {
+                  const index = readRegisters[position].indexOf(
+                    instruction.rs1
+                  );
+                  if (index > -1) {
+                    readRegisters[position].splice(index, 1);
+                  }
+                }
+
+                if (instruction.rs2 !== '') {
+                  const index = readRegisters[position].indexOf(
+                    instruction.rs2
+                  );
+                  if (index > -1) {
+                    readRegisters[position].splice(index, 1);
+                  }
+                }
+              }
+              this.dataSource2.data = this.getResultsArray();
+            } else {
+              this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] =
+                instruction;
+            }
           }
 
           // ID Stage
@@ -1323,8 +1330,6 @@ export class SuperescalarComponent {
               instruction;
           }
 
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-
           // Verifica se a thread foi finalizada
           finished[pos] =
             instructionIndex[pos] >= this.threads[pos].instructions.length &&
@@ -1335,10 +1340,13 @@ export class SuperescalarComponent {
 
           // Atualiza IPC
           this.results.IPC =
-            this.results.CiclosExecucao != 0
+            this.results.CiclosExecucao !== 0
               ? this.results.Instrucoes / this.results.CiclosExecucao
               : 0;
           this.dataSource2.data = this.getResultsArray();
+
+          // Await opcional para permitir pausa entre as iterações do loop
+          await new Promise((resolve) => setTimeout(resolve, 2000));
         }
       }
     }
