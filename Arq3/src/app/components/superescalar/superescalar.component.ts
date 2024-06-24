@@ -112,7 +112,8 @@ export class SuperescalarComponent {
   generateInstruction(
     threadName: string,
     backgroundColor: string,
-    threadId: number
+    threadId: number,
+    id: string
   ): Instruction {
     const name = this.getRandomInstructionName();
     const rd = this.getRandomRegister();
@@ -151,7 +152,8 @@ export class SuperescalarComponent {
         rd,
         rs1,
         rs2,
-        0
+        0,
+        id
       );
     } else if (['LB', 'LH', 'LW', 'LBU', 'LHU'].includes(name)) {
       return new Instruction(
@@ -163,7 +165,8 @@ export class SuperescalarComponent {
         rd,
         rs1,
         '',
-        imm
+        imm,
+        id
       );
     } else if (['SB', 'SH', 'SW'].includes(name)) {
       return new Instruction(
@@ -175,7 +178,8 @@ export class SuperescalarComponent {
         '',
         rs1,
         rs2,
-        imm
+        imm,
+        id
       );
     } else if (['BEQ', 'BNE', 'BLT', 'BGE', 'BLTU', 'BGEU'].includes(name)) {
       return new Instruction(
@@ -187,7 +191,8 @@ export class SuperescalarComponent {
         '',
         rs1,
         rs2,
-        imm
+        imm,
+        id
       );
     } else if (name === 'JAL') {
       return new Instruction(
@@ -199,7 +204,8 @@ export class SuperescalarComponent {
         rd,
         '',
         '',
-        imm
+        imm,
+        id
       );
     } else {
       return new Instruction(
@@ -211,7 +217,8 @@ export class SuperescalarComponent {
         rd,
         rs1,
         '',
-        imm
+        imm,
+        id
       );
     }
   }
@@ -227,7 +234,8 @@ export class SuperescalarComponent {
       const instruction = this.generateInstruction(
         threadName,
         backgroundColor,
-        threadId
+        threadId,
+        `${i}`
       );
       instructions.push(instruction);
     }
@@ -309,7 +317,8 @@ export class SuperescalarComponent {
                         instruction.rd,
                         instruction.rs1,
                         instruction.rs2,
-                        instruction.imm
+                        instruction.imm,
+                        instruction.id
                       )
                   ),
                   thread.name,
@@ -923,7 +932,7 @@ export class SuperescalarComponent {
 
             // Se EX ficar vazio, passar para proxima thread
             // console.log(!addedEX && started && !stop && countLoop < 8);
-            // STOP:
+            STOP:
             while(!addedEX && started && !stop && countLoop < 8) {
               countLoop++;
 
@@ -1012,14 +1021,16 @@ export class SuperescalarComponent {
                       let lastNonEmptyName = lastInstruction ? lastInstruction.name : '';
   
                       if (instruction.name == lastNonEmptyName) stop = true;
-                      //if(stop) break STOP;
+                      if(stop) break STOP;
                     }
                     this.dataSource2.data = this.getResultsArray();
                   } else {
                     this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] = instruction;
                   }
                 } else {
-                  //if (!this.pipelineHistory[this.actualLine].JANELA.includes(instruction)) this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] = instruction;
+                  // if (!this.pipelineHistory[this.actualLine].JANELA.some(i => i.id === instruction.id)) {
+                  //   this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] = instruction;
+                  // }
                 }
               }
               numberThreadOnExecute = (numberThreadOnExecute + 1) % this.NUM_THREADS;
@@ -1345,6 +1356,7 @@ export class Instruction {
   rs1: string;
   rs2: string;
   imm: number;
+  id: string;
   isBlocked: boolean;
 
   constructor(
@@ -1356,7 +1368,8 @@ export class Instruction {
     rd: string,
     rs1: string,
     rs2: string,
-    imm: number
+    imm: number,
+    id: string
   ) {
     this.threadName = threadName;
     this.threadId = threadId;
@@ -1369,6 +1382,7 @@ export class Instruction {
     this.rs2 = rs2;
     this.imm = imm;
     this.isBlocked = false;
+    this.id = 'id' + threadId + threadId
   }
 
   clone(): Instruction {
@@ -1381,7 +1395,8 @@ export class Instruction {
       this.rd,
       this.rs1,
       this.rs2,
-      this.imm
+      this.imm,
+      this.id
     );
   }
 
@@ -1415,17 +1430,17 @@ export class Instruction {
   }
 
   static null(): Instruction {
-    return new Instruction('', -1, 'transparent', '', '', '', '', '', -1);
+    return new Instruction('', -1, 'transparent', '', '', '', '', '', -1, '-1');
   }
 
   static nullArray(n: number): Instruction[] {
     return Array.from(
       { length: n },
-      () => new Instruction('', -1, 'transparent', '', '', '', '', '', -1)
+      () => new Instruction('', -1, 'transparent', '', '', '', '', '', -1, '-1')
     );
   }
 
-  static bubble(threadName: string, threadId: number): Instruction {
+  static bubble(threadName: string, threadId: number, id: string): Instruction {
     return new Instruction(
       threadName,
       threadId,
@@ -1435,7 +1450,8 @@ export class Instruction {
       '',
       '',
       '',
-      -1
+      -1,
+      id
     );
   }
 }
