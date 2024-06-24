@@ -40,3 +40,7 @@ mat-divider{
 .blocked {
     text-decoration: line-through;
 }
+
+table.my-table .mat-row .mat-cell, table.my-table .mat-row .mat-header-cell {
+    border-bottom: 2px solid black !important;
+}

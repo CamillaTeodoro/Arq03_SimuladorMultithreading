@@ -16,9 +16,7 @@ export class InstructionResult {
 export class SuperescalarComponent {
   NUM_THREADS = 4;
   THREAD_SIZE = 20;
-  BLOCK_SIZE = 3;
-
-  THREADS_PER_CORE = 2;
+  BLOCK_SIZE = 2;
 
   @Input() tipo: string = '';
   constructor(private cdRef: ChangeDetectorRef) {}
@@ -540,7 +538,7 @@ export class SuperescalarComponent {
         this.pipelineHistory[this.actualLine].ID[newIDIndex++] = instruction;
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       finished =
         instructionIndex >= this.threads[0].instructions.length &&
@@ -591,7 +589,12 @@ export class SuperescalarComponent {
 
     let numberThreadOnExecute = 2;
 
+    let started = false;
+
     while (!finished.every((val) => val === true)) {
+
+      let updatedNumberThread = false;
+
       for (let pos = 0; pos < this.NUM_THREADS; pos++) {
         if (!finished[pos]) {
           // Finalizar instrucoes em WB
@@ -635,97 +638,109 @@ export class SuperescalarComponent {
           let alreadyCount = false;
           let janelaIndex = 0;
 
-          for (let j = 0; j < JANELASize; j++) {
-            let instruction =
-              this.pipelineHistory[this.actualLine - 1].JANELA[j];
+          let addedEX = false;
+          let stop = false;
+          let countLoop = 0;
+          // Se EX ficar vazio, passar para proxima thread
+          STOP:
+          while(!addedEX && started && !stop && countLoop < 8) {
+            countLoop++;
 
-            // Verificar se pertence a thread atual
-            const threadAtual = `T${numberThreadOnExecute}`;
-            const position = instruction.threadId;
+            for (let j = 0; j < JANELASize; j++) {
+              let instruction = this.pipelineHistory[this.actualLine - 1].JANELA[j];
 
-            console.log(threadAtual);
+              // Verificar se pertence a thread atual
+              const threadAtual = `T${numberThreadOnExecute}`;
+              const position = instruction.threadId;
 
-            if (
-              instruction.threadName == threadAtual ||
-              instruction.threadName == ''
-            ) {
-              // Desbloquear instrucoes que tinham dependencia verdadeira
-              if (instruction.isBlocked) {
-                let index = freeRegisteres[position].indexOf(instruction.rs1);
-                if (index > -1) {
-                  freeRegisteres[position].splice(index, 1);
-                  instruction.isBlocked = false;
-                }
-              }
-              if (instruction.isBlocked) {
-                console.log(freeRegisteres);
-                const index = freeRegisteres[position].indexOf(instruction.rs2);
-                if (index > -1) {
-                  freeRegisteres[position].splice(index, 1);
-                  instruction.isBlocked = false;
-                }
-              }
-
-              // Somente tentar inserir se nao houver dependencia
-              if (!instruction.isBlocked) {
-                // Inserir nas Unidades Funcionais
-                let hasInsert =
-                  this.pipelineHistory[this.actualLine].updateExecution(
-                    instruction
-                  );
-
-                // Se nao tinha espaco livre para aquela instrucao, repetir na janela de novo
-                if (!hasInsert && instruction.name !== '') {
-                  this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] =
-                    instruction;
-                }
-
-                // Contabilizar ciclos de execucao
-                if (!alreadyCount && instruction.name !== '') {
-                  this.results.CiclosExecucao++;
-                  alreadyCount = true;
-                }
-
-                // Contabilizar instrucoes executadas
-                if (hasInsert && instruction.name !== '') {
-                  this.results.Instrucoes++;
-
-                  // Atualizar buffer de verificacao de dependencia falsa
-                  if (instruction.rs1 !== '') {
-                    const index = readRegisters[position].indexOf(
-                      instruction.rs1
-                    );
-                    if (index > -1) {
-                      if (readRegisters[position].length > 1) {
-                        readRegisters[position].splice(index, 1);
-                      } else {
-                        readRegisters[position][index] = '';
-                      }
-                    }
-                  }
-
-                  if (instruction.rs2 !== '') {
-                    const index = readRegisters[position].indexOf(
-                      instruction.rs2
-                    );
-                    if (index > -1) {
-                      if (readRegisters[position].length > 1) {
-                        readRegisters[position].splice(index, 1);
-                      } else {
-                        readRegisters[position][index] = '';
-                      }
-                    }
+              if (
+                instruction.threadName == threadAtual ||
+                instruction.threadName == ''
+              ) {
+                // Desbloquear instrucoes que tinham dependencia verdadeira
+                if (instruction.isBlocked) {
+                  let index = freeRegisteres[position].indexOf(instruction.rs1);
+                  if (index > -1) {
+                    freeRegisteres[position].splice(index, 1);
+                    instruction.isBlocked = false;
                   }
                 }
-                this.dataSource2.data = this.getResultsArray();
+                if (instruction.isBlocked) {
+                  console.log(freeRegisteres);
+                  const index = freeRegisteres[position].indexOf(instruction.rs2);
+                  if (index > -1) {
+                    freeRegisteres[position].splice(index, 1);
+                    instruction.isBlocked = false;
+                  }
+                }
+
+                // Somente tentar inserir se nao houver dependencia
+                if (!instruction.isBlocked) {
+                  // Inserir nas Unidades Funcionais
+                  let hasInsert = this.pipelineHistory[this.actualLine].updateExecution(instruction);
+
+                  // Se nao tinha espaco livre para aquela instrucao, repetir na janela de novo
+                  if (!hasInsert && instruction.name !== '') {
+                    this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] = instruction;
+                  }
+
+                  // Contabilizar ciclos de execucao
+                  if (!alreadyCount && instruction.name !== '') {
+                    this.results.CiclosExecucao++;
+                    addedEX = true;
+                    alreadyCount = true;
+                  }
+
+                  // Contabilizar instrucoes executadas
+                  if (hasInsert && instruction.name !== '') {
+                    this.results.Instrucoes++;
+
+                    // Atualizar buffer de verificacao de dependencia falsa
+                    if (instruction.rs1 !== '') {
+                      const index = readRegisters[position].indexOf(
+                        instruction.rs1
+                      );
+                      if (index > -1) {
+                        if (readRegisters[position].length > 1) {
+                          readRegisters[position].splice(index, 1);
+                        } else {
+                          readRegisters[position][index] = '';
+                        }
+                      }
+                    }
+
+                    if (instruction.rs2 !== '') {
+                      const index = readRegisters[position].indexOf(
+                        instruction.rs2
+                      );
+                      if (index > -1) {
+                        if (readRegisters[position].length > 1) {
+                          readRegisters[position].splice(index, 1);
+                        } else {
+                          readRegisters[position][index] = '';
+                        }
+                      }
+                    }
+
+                    // Verificar se janela esta vazia
+                    let subArray = this.pipelineHistory[this.actualLine].JANELA.slice(janelaIndex-1);
+                    let lastInstruction = subArray.reverse().find(instruction => instruction.name !== '');
+                    let lastNonEmptyName = lastInstruction ? lastInstruction.name : '';
+
+                    if (instruction.name == lastNonEmptyName) stop = true;
+                    if(stop) break STOP;
+
+                  }
+                  this.dataSource2.data = this.getResultsArray();
+                } else {
+                  this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] = instruction;
+                }
               } else {
-                this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] =
-                  instruction;
+                if (!this.pipelineHistory[this.actualLine].JANELA.includes(instruction)) this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] = instruction;
               }
-            } else {
-              this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] =
-                instruction;
             }
+            numberThreadOnExecute = (numberThreadOnExecute + 1) % this.NUM_THREADS;
+            updatedNumberThread = true;
           }
 
           let IDIndex = 0;
@@ -739,6 +754,7 @@ export class SuperescalarComponent {
             if (instruction.name !== '') {
               this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] =
                 instruction;
+              started = true;
 
               // Verificar dependencias falsas
               const position = instruction.threadId;
@@ -797,7 +813,7 @@ export class SuperescalarComponent {
               instruction;
           }
 
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+          await new Promise((resolve) => setTimeout(resolve, 2000));
 
           finished[pos] =
             instructionIndex >= this.threads[pos].instructions.length &&
@@ -811,7 +827,8 @@ export class SuperescalarComponent {
               : 0;
           this.dataSource2.data = this.getResultsArray();
         }
-        numberThreadOnExecute = (numberThreadOnExecute + 1) % this.NUM_THREADS;
+
+        if(!updatedNumberThread) numberThreadOnExecute = (numberThreadOnExecute + 1) % this.NUM_THREADS;
       }
     }
   }
@@ -850,11 +867,18 @@ export class SuperescalarComponent {
     let finishedCount = new Array(this.NUM_THREADS).fill(0);
 
     let numberThreadOnExecute = 2;
+    let started = false;
 
     while (!finished.every((val) => val === true)) {
+
+      let updatedNumberThread = false;
+
       for (let pos = 0; pos < this.NUM_THREADS; pos++) {
+
         if (!finished[pos]) {
+
           for (let k = 0; k < this.BLOCK_SIZE; k++) {
+
             // Finalizar instrucoes em WB
             for (let j = 0; j < WBSize; j++) {
               // Remover registrador de destino como possivel dependencia falsa
@@ -896,102 +920,115 @@ export class SuperescalarComponent {
             let alreadyCount = false;
             let janelaIndex = 0;
 
-            for (let j = 0; j < JANELASize; j++) {
-              let instruction =
-                this.pipelineHistory[this.actualLine - 1].JANELA[j];
+            let addedEX = false;
+            let stop = false;
+            let countLoop = 0;
 
-              // Verificar se pertence a thread atual
-              const threadAtual = `T${numberThreadOnExecute}`;
-              const position = instruction.threadId;
+            // Se EX ficar vazio, passar para proxima thread
+            // console.log(!addedEX && started && !stop && countLoop < 8);
+            // STOP:
+            // while(!addedEX && started && !stop && countLoop < 8) {
+            //   countLoop++;
 
-              console.log(threadAtual);
+              for (let j = 0; j < JANELASize; j++) {
+                let instruction = this.pipelineHistory[this.actualLine - 1].JANELA[j];
 
-              if (
-                instruction.threadName == threadAtual ||
-                instruction.threadName == ''
-              ) {
-                // Desbloquear instrucoes que tinham dependencia verdadeira
-                if (instruction.isBlocked) {
-                  let index = freeRegisteres[position].indexOf(instruction.rs1);
-                  if (index > -1) {
-                    freeRegisteres[position].splice(index, 1);
-                    instruction.isBlocked = false;
-                  }
-                }
-                if (instruction.isBlocked) {
-                  console.log(freeRegisteres);
-                  const index = freeRegisteres[position].indexOf(
-                    instruction.rs2
-                  );
-                  if (index > -1) {
-                    freeRegisteres[position].splice(index, 1);
-                    instruction.isBlocked = false;
-                  }
-                }
+                // Verificar se pertence a thread atual
+                const threadAtual = `T${numberThreadOnExecute}`;
+                const position = instruction.threadId;
 
-                // Somente tentar inserir se nao houver dependencia
-                if (!instruction.isBlocked) {
-                  // Inserir nas Unidades Funcionais
-                  let hasInsert =
-                    this.pipelineHistory[this.actualLine].updateExecution(
-                      instruction
-                    );
-
-                  // Se nao tinha espaco livre para aquela instrucao, repetir na janela de novo
-                  if (!hasInsert && instruction.name !== '') {
-                    this.pipelineHistory[this.actualLine].JANELA[
-                      janelaIndex++
-                    ] = instruction;
-                  }
-
-                  // Contabilizar ciclos de execucao
-                  if (!alreadyCount && instruction.name !== '') {
-                    this.results.CiclosExecucao++;
-                    alreadyCount = true;
-                  }
-
-                  // Contabilizar instrucoes executadas
-                  if (hasInsert && instruction.name !== '') {
-                    this.results.Instrucoes++;
-
-                    // Atualizar buffer de verificacao de dependencia falsa
-                    if (instruction.rs1 !== '') {
-                      const index = readRegisters[position].indexOf(
-                        instruction.rs1
-                      );
-                      if (index > -1) {
-                        if (readRegisters[position].length > 1) {
-                          readRegisters[position].splice(index, 1);
-                        } else {
-                          readRegisters[position][index] = '';
-                        }
-                      }
-                    }
-
-                    if (instruction.rs2 !== '') {
-                      const index = readRegisters[position].indexOf(
-                        instruction.rs2
-                      );
-                      if (index > -1) {
-                        if (readRegisters[position].length > 1) {
-                          readRegisters[position].splice(index, 1);
-                        } else {
-                          readRegisters[position][index] = '';
-                        }
-                      }
+                if (
+                  instruction.threadName == threadAtual ||
+                  instruction.threadName == ''
+                ) {
+                  // Desbloquear instrucoes que tinham dependencia verdadeira
+                  if (instruction.isBlocked) {
+                    let index = freeRegisteres[position].indexOf(instruction.rs1);
+                    if (index > -1) {
+                      freeRegisteres[position].splice(index, 1);
+                      instruction.isBlocked = false;
                     }
                   }
-                  this.dataSource2.data = this.getResultsArray();
+                  if (instruction.isBlocked) {
+                    console.log(freeRegisteres);
+                    const index = freeRegisteres[position].indexOf(instruction.rs2);
+                    if (index > -1) {
+                      freeRegisteres[position].splice(index, 1);
+                      instruction.isBlocked = false;
+                    }
+                  }
+
+                  // Somente tentar inserir se nao houver dependencia
+                  if (!instruction.isBlocked) {
+                    // Inserir nas Unidades Funcionais
+                    let hasInsert =
+                      this.pipelineHistory[this.actualLine].updateExecution(
+                        instruction
+                      );
+
+                    // Se nao tinha espaco livre para aquela instrucao, repetir na janela de novo
+                    if (!hasInsert && instruction.name !== '') {
+                      this.pipelineHistory[this.actualLine].JANELA[ janelaIndex++] = instruction;
+                    }
+
+                    // Contabilizar ciclos de execucao
+                    if (!alreadyCount && instruction.name !== '') {
+                      this.results.CiclosExecucao++;
+                      addedEX = true;
+                      alreadyCount = true;
+                    }
+
+                    // Contabilizar instrucoes executadas
+                    if (hasInsert && instruction.name !== '') {
+                      this.results.Instrucoes++;
+
+                      // Atualizar buffer de verificacao de dependencia falsa
+                      if (instruction.rs1 !== '') {
+                        const index = readRegisters[position].indexOf(
+                          instruction.rs1
+                        );
+                        if (index > -1) {
+                          if (readRegisters[position].length > 1) {
+                            readRegisters[position].splice(index, 1);
+                          } else {
+                            readRegisters[position][index] = '';
+                          }
+                        }
+                      }
+
+                      if (instruction.rs2 !== '') {
+                        const index = readRegisters[position].indexOf(
+                          instruction.rs2
+                        );
+                        if (index > -1) {
+                          if (readRegisters[position].length > 1) {
+                            readRegisters[position].splice(index, 1);
+                          } else {
+                            readRegisters[position][index] = '';
+                          }
+                        }
+                      }
+
+                      // Verificar se janela esta vazia
+                      let subArray = this.pipelineHistory[this.actualLine].JANELA.slice(janelaIndex-1);
+                      let lastInstruction = subArray.reverse().find(instruction => instruction.name !== '');
+                      let lastNonEmptyName = lastInstruction ? lastInstruction.name : '';
+  
+                      if (instruction.name == lastNonEmptyName) stop = true;
+                      //if(stop) break STOP;
+                    }
+                    this.dataSource2.data = this.getResultsArray();
+                  } else {
+                    this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] = instruction;
+                  }
                 } else {
-                  this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] =
-                    instruction;
+                  //if (!this.pipelineHistory[this.actualLine].JANELA.includes(instruction)) this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] = instruction;
                 }
-              } else {
-                this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] =
-                  instruction;
-              }
+              // }
+              // numberThreadOnExecute = (numberThreadOnExecute + 1) % this.NUM_THREADS;
+              // updatedNumberThread = true;
             }
-
+  
             let IDIndex = 0;
 
             // Mover do ID para a janela
@@ -1003,6 +1040,7 @@ export class SuperescalarComponent {
               if (instruction.name !== '') {
                 this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] =
                   instruction;
+                started = true;
 
                 // Verificar dependencias falsas
                 const position = instruction.threadId;
@@ -1061,7 +1099,7 @@ export class SuperescalarComponent {
                 instruction;
             }
 
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+            await new Promise((resolve) => setTimeout(resolve, 2000));
 
             finished[pos] =
               instructionIndex >= this.threads[pos].instructions.length &&
@@ -1075,8 +1113,8 @@ export class SuperescalarComponent {
                 : 0;
             this.dataSource2.data = this.getResultsArray();
           }
-          numberThreadOnExecute =
-            (numberThreadOnExecute + 1) % this.NUM_THREADS;
+
+          numberThreadOnExecute = (numberThreadOnExecute + 1) % this.NUM_THREADS;
         }
       }
     }
@@ -1277,6 +1315,8 @@ export class SuperescalarComponent {
             this.pipelineHistory[this.actualLine].ID[newIDIndex++] =
               instruction;
           }
+
+          await new Promise((resolve) => setTimeout(resolve, 2000));
 
           // Verifica se a thread foi finalizada
           finished[pos] =
