@@ -940,7 +940,7 @@ export class SuperescalarComponent {
                 let instruction = this.pipelineHistory[this.actualLine - 1].JANELA[j];
 
                 // Verificar se pertence a thread atual
-                const threadAtual = `T${numberThreadOnExecute}`;
+                let threadAtual = `T${numberThreadOnExecute}`;
                 const position = instruction.threadId;
 
                 if (
@@ -1022,11 +1022,16 @@ export class SuperescalarComponent {
                       let lastNonEmptyName = lastInstruction ? lastInstruction.name : '';
   
                       if (instruction.name == lastNonEmptyName) stop = true;
-                      if(stop) break STOP;
+                      if(stop) {
+                        numberThreadOnExecute = (numberThreadOnExecute + 1) % this.NUM_THREADS;
+                        updatedNumberThread = true;
+                        break STOP;
+                      }
+
                     }
                     this.dataSource2.data = this.getResultsArray();
                   } else {
-                    this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] = instruction.clone();;
+                    this.pipelineHistory[this.actualLine].JANELA[janelaIndex++] = instruction.clone();
                   }
                 } else {
                   // Desbloquear instrucoes que tinham dependencia verdadeira
